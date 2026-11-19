@@ -1,0 +1,3229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simulador interactivo que compara arquitecturas de radio HDR vs. SDR y evalúa la viabilidad de distintos SDR para desplegar 5G privada.">
+  <meta name="robots" content="index, follow">
+  <meta name="artifact-type" content="dashboard">
+  <meta name="design-style" content="carbon">
+  <title>Simulador y Explorador de Arquitecturas de Radio: HDR vs. SDR</title>
+
+  <!-- Google Fonts: IBM Plex Sans & IBM Plex Mono (Carbon Style) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for exact mathematical expressions (SRI: integridad verificada) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.18.2/dist/katex.min.css"
+        integrity="sha384-qArEAQvOPs1o7K1iAybhs66g8nYTXVt4VLOQ3abu+OMLJyPNfaH4Wpko0X2epHJ+" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.18.2/dist/katex.min.js"
+          integrity="sha384-IHT6Yddb0KLCzZaxQ/so1j3xkJ8R6hOkCR06ma9NDHGn0Z4ClKcGtQ6qqsflRPxR" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.18.2/dist/contrib/auto-render.min.js"
+          integrity="sha384-bjyGPfbij8/NDKJhSGZNP/khQVgtHUE5exjm4Ydllo42FwIgYsdLO2lXGmRBf5Mz" crossorigin="anonymous" defer></script>
+
+  <!-- Lucide Icons (SRI: integridad verificada) -->
+  <script src="https://unpkg.com/lucide@1.43.0/dist/umd/lucide.min.js"
+          integrity="sha384-EUCkRDZz3ccamjWUTnQ+m2+FFO3t+HeuyOgvxU+FsQyXj4M4RxfkwPHtP95OPSmV" crossorigin="anonymous" defer></script>
+
+  <style>
+    :root {
+      color-scheme: light;
+
+      /* Page and surfaces (Carbon theme) */
+      --background: #ffffff;
+      --surface-container: #f4f4f4;
+      --surface-container-high: #e0e0e0;
+
+      /* Ink */
+      --on-surface: #161616;
+      --on-surface-variant: #525252;
+
+      /* Rules */
+      --outline: #8d8d8d;
+      --outline-variant: #e0e0e0;
+
+      /* Accents */
+      --primary: #0f62fe;
+      --on-primary: #ffffff;
+      --primary-container: #d0e2ff;
+      --secondary: #6f6f6f;
+      --tertiary: #198038;
+      --error: #da1e28;
+
+      /* Semantic tokens */
+      --positive: #198038;
+      --warning: #b28600;
+      --focus: #0f62fe;
+
+      /* Data series tokens */
+      --data-2: #6929c4;
+
+      /* Fonts */
+      --font-headline: 'IBM Plex Sans', sans-serif;
+      --font-body: 'IBM Plex Sans', sans-serif;
+      --font-label: 'IBM Plex Mono', monospace;
+
+      /* Type scale for dense technical dashboard */
+      --display-size: clamp(1.6rem, 1.3rem + 1.2vw, 2.1rem);
+      --headline-size: clamp(1.2rem, 1.05rem + 0.5vw, 1.45rem);
+      --body-size: clamp(0.9rem, 0.88rem + 0.15vw, 0.98rem);
+      --label-size: 0.75rem;
+
+      /* Spacing scale */
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+
+      /* Shape */
+      --rounded: 0.125rem;
+      --rounded-full: 0.75rem;
+
+      /* Style effects */
+      --shadow-1: 0 2px 6px rgb(0 0 0 / 0.1);
+      --rule: 1px solid var(--outline-variant);
+      --field-rule: 1px solid var(--outline);
+      --indicator: 2px solid var(--primary);
+
+      /* Motion */
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur-micro: 120ms;
+    }
+
+    /* Base Reset */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      overflow-x: clip;
+      margin: 0;
+      padding: 0;
+      background-color: var(--background);
+      color: var(--on-surface);
+      font-family: var(--font-body);
+      font-size: var(--body-size);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    header { position: static !important; }
+
+    .page-grid {
+      display: grid;
+      gap: var(--space-lg);
+      padding: var(--space-lg);
+      max-width: 1360px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+    .page-grid * { min-width: 0; }
+
+    /* Layout grids (responsive) */
+    .split-main-side { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--space-md); align-items: start; }
+    .split-side-main { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: var(--space-md); align-items: start; }
+    .split-half      { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); align-items: start; }
+
+    @media (max-width: 980px) {
+      .split-main-side, .split-side-main { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 760px) {
+      .split-half { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 700px) {
+      .page-grid { overflow: visible; }
+    }
+
+    /* Typography & Hierarchy */
+    h1, h2, h3, h4, p { margin: 0; }
+    .fw-600 { font-weight: 600; }
+    .page-title {
+      font-family: var(--font-headline);
+      font-weight: 300;
+      font-size: var(--display-size);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+      color: var(--on-surface);
+    }
+    .page-title strong { font-weight: 600; }
+    .page-subtitle {
+      font-family: var(--font-body);
+      font-size: var(--body-size);
+      color: var(--on-surface-variant);
+      max-width: 85ch;
+      margin-top: var(--space-xs);
+    }
+
+    .section-head {
+      border-bottom: var(--rule);
+      padding-bottom: var(--space-sm);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+    .section-title {
+      font-family: var(--font-headline);
+      font-size: var(--headline-size);
+      font-weight: 600;
+      color: var(--on-surface);
+      letter-spacing: -0.01em;
+    }
+
+    .label {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--on-surface-variant);
+    }
+    .key-value {
+      font-family: var(--font-label);
+      font-weight: 400;
+      font-size: 1.75rem;
+      line-height: 1.2;
+    }
+
+    /* Carbon Layers & Containers */
+    .layer {
+      background-color: var(--surface-container);
+      border-radius: var(--rounded);
+      padding: var(--space-md);
+      position: relative;
+    }
+    .layer-high {
+      background-color: var(--surface-container-high);
+      border-radius: var(--rounded);
+      padding: var(--space-md);
+    }
+    .layer-card {
+      background-color: var(--surface-container);
+      border-radius: 0;
+      padding: var(--space-md);
+      border-left: 3px solid transparent;
+      transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
+    }
+    .layer-card.active {
+      border-left-color: var(--primary);
+      background-color: var(--primary-container);
+    }
+    .layer-card.active-hdr {
+      border-left-color: var(--error);
+      background-color: #fee2e2;
+    }
+    .layer-card.active-sdr {
+      border-left-color: var(--primary);
+      background-color: var(--primary-container);
+    }
+
+    /* Metric Tiles Strip */
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+      gap: var(--space-md);
+    }
+    .metric-tile {
+      background-color: var(--surface-container);
+      padding: var(--space-md);
+      border-bottom: 2px solid var(--outline-variant);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .metric-tile.indicated {
+      border-bottom: var(--indicator);
+    }
+    .metric-tile.indicated-hdr {
+      border-bottom: 2px solid var(--error);
+    }
+
+    /* Tabs Navigation */
+    .nav-tabs {
+      display: flex;
+      gap: var(--space-xs);
+      border-bottom: var(--rule);
+      overflow-x: auto;
+      scrollbar-width: thin;
+      padding-bottom: 0;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      font-family: var(--font-headline);
+      font-size: 0.95rem;
+      font-weight: 400;
+      color: var(--on-surface-variant);
+      padding: var(--space-sm) var(--space-md);
+      cursor: pointer;
+      position: relative;
+      white-space: nowrap;
+      flex: 0 0 auto;
+      transition: color var(--dur-micro) var(--ease-out);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    .tab-btn:hover {
+      color: var(--on-surface);
+      background-color: var(--surface-container);
+    }
+    .tab-btn.is-active {
+      color: var(--on-surface);
+      font-weight: 600;
+    }
+    .tab-btn.is-active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: var(--primary);
+    }
+
+    /* Interactive Architectural Columns */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-md);
+    }
+    @media (max-width: 900px) {
+      .arch-grid { grid-template-columns: 1fr; }
+    }
+
+    .pipeline-column {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+    .pipeline-column-header {
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: var(--rule);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      font-family: var(--font-label);
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: var(--rounded-full);
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .badge-hdr {
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+    .badge-sdr {
+      background-color: var(--primary-container);
+      color: #002d9c;
+      border: 1px solid #a6c8ff;
+    }
+    .badge-neutral {
+      background-color: var(--surface-container-high);
+      color: var(--on-surface-variant);
+    }
+
+    /* Pipeline Step Interactive Nodes */
+    .flow-node {
+      display: flex;
+      align-items: stretch;
+      background-color: var(--surface-container);
+      border: 1px solid var(--outline-variant);
+      border-radius: var(--rounded);
+      cursor: pointer;
+      transition: all var(--dur-micro) var(--ease-out);
+      position: relative;
+    }
+    .flow-node:hover {
+      background-color: var(--surface-container-high);
+      border-color: var(--outline);
+    }
+    .flow-node:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+    .flow-node.active-node {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+    .flow-node.active-node-hdr {
+      border-color: var(--error);
+      box-shadow: 0 0 0 1px var(--error);
+      background-color: #fff5f5;
+    }
+    .flow-node.active-node-sdr {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px var(--primary);
+      background-color: #f0f7ff;
+    }
+
+    .node-num {
+      width: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-label);
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-right: 1px solid var(--outline-variant);
+      background-color: #ffffff;
+    }
+    .node-content {
+      padding: var(--space-sm) var(--space-md);
+      flex: 1;
+    }
+    .node-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--on-surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .node-desc {
+      font-size: 0.82rem;
+      color: var(--on-surface-variant);
+      margin-top: 2px;
+    }
+    .node-tag {
+      font-family: var(--font-label);
+      font-size: 0.7rem;
+      color: var(--secondary);
+    }
+
+    .flow-arrow-down {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: var(--secondary);
+      height: 14px;
+    }
+
+    /* Inspector Drawer / Side Panel */
+    .inspector-panel {
+      background-color: var(--surface-container);
+      border: 1px solid var(--outline-variant);
+      border-radius: var(--rounded);
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    /* Lab & Simulator Layout */
+    .sim-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: var(--space-md);
+      align-items: start;
+    }
+    @media (max-width: 960px) {
+      .sim-grid { grid-template-columns: 1fr; }
+    }
+
+    .controls-box {
+      background-color: var(--surface-container);
+      padding: var(--space-md);
+      border-radius: var(--rounded);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .control-label {
+      font-family: var(--font-label);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--on-surface-variant);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .control-val {
+      font-weight: 600;
+      color: var(--on-surface);
+    }
+
+    /* Form Inputs */
+    select, input[type="range"], input[type="number"] {
+      font-family: inherit;
+      font-size: 0.88rem;
+    }
+    select {
+      height: 40px;
+      background-color: var(--background);
+      border: var(--field-rule);
+      border-radius: var(--rounded);
+      padding: 0 var(--space-md);
+      color: var(--on-surface);
+      cursor: pointer;
+    }
+    select:focus-visible {
+      outline: 2px solid var(--focus);
+    }
+    input[type="range"] {
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    /* Buttons */
+    .btn {
+      height: 40px;
+      font-family: var(--font-headline);
+      font-size: 0.88rem;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--rounded);
+      padding: 0 var(--space-md);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      transition: background-color var(--dur-micro) var(--ease-out);
+    }
+    .btn-primary {
+      background-color: var(--primary);
+      color: var(--on-primary);
+    }
+    .btn-primary:hover {
+      background-color: #0353e9;
+    }
+    .btn-secondary {
+      background-color: var(--surface-container-high);
+      color: var(--on-surface);
+    }
+    .btn-secondary:hover {
+      background-color: #d1d1d1;
+    }
+    .btn-sm {
+      height: 32px;
+      font-size: 0.78rem;
+      padding: 0 var(--space-sm);
+    }
+
+    /* Visualizer Canvases */
+    .canvas-card {
+      background-color: var(--background);
+      border: 1px solid var(--outline-variant);
+      border-radius: var(--rounded);
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .canvas-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .canvas-title {
+      font-family: var(--font-headline);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--on-surface);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .canvas-wrap {
+      width: 100%;
+      height: 220px;
+      position: relative;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background-color: #0b1017;
+      border-radius: var(--rounded);
+    }
+
+    .canvas-grid-2x2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-md);
+    }
+    @media (max-width: 800px) {
+      .canvas-grid-2x2 { grid-template-columns: 1fr; }
+    }
+
+    /* Hardware Evaluation Matrix */
+    .hw-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .hw-table th {
+      background-color: var(--surface-container-high);
+      font-family: var(--font-label);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-align: left;
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 2px solid var(--outline);
+    }
+    .hw-table td {
+      padding: var(--space-md);
+      border-bottom: var(--rule);
+      vertical-align: top;
+    }
+    .hw-table tr:nth-child(even) td {
+      background-color: var(--surface-container);
+    }
+    .hw-table tr.selected-row td {
+      background-color: var(--primary-container);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-label);
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: var(--rounded-full);
+      font-weight: 600;
+    }
+    .status-pass {
+      background-color: #defbe6;
+      color: #0e6027;
+      border: 1px solid #a7f0ba;
+    }
+    .status-fail {
+      background-color: #ffebee;
+      color: #ba1b23;
+      border: 1px solid #ffccd0;
+    }
+    .status-warn {
+      background-color: #fef3d6;
+      color: #7a5a00;
+      border: 1px solid #fde293;
+    }
+
+    /* 5G Feasibility Tester */
+    .eval-card {
+      background-color: var(--surface-container);
+      border: 1px solid var(--outline-variant);
+      padding: var(--space-md);
+      border-radius: var(--rounded);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+    .eval-check {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-sm);
+      padding: var(--space-sm);
+      border-radius: var(--rounded);
+      background-color: var(--background);
+      border: 1px solid var(--outline-variant);
+    }
+    .eval-check.pass { border-left: 4px solid var(--positive); }
+    .eval-check.fail { border-left: 4px solid var(--error); }
+    .eval-check.warn { border-left: 4px solid var(--warning); }
+
+    /* Callout & Technical Note */
+    .callout {
+      border-left: 4px solid var(--primary);
+      background-color: var(--primary-container);
+      padding: var(--space-md);
+      border-radius: 0 var(--rounded) var(--rounded) 0;
+      color: var(--on-surface);
+      font-size: 0.92rem;
+    }
+    .callout-title {
+      font-family: var(--font-label);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: #002d9c;
+      margin-bottom: var(--space-xs);
+    }
+
+    /* Spectrum Sensing Interactive Display */
+    .waterfall-canvas {
+      height: 180px;
+    }
+
+    /* General Utilities */
+    .flex-row { display: flex; align-items: center; gap: var(--space-sm); }
+    .space-between { justify-content: space-between; }
+    .text-mono { font-family: var(--font-label); }
+    .text-muted { color: var(--on-surface-variant); }
+    .gap-sm { gap: var(--space-sm); }
+    .gap-md { gap: var(--space-md); }
+    .mt-sm { margin-top: var(--space-sm); }
+    .mt-md { margin-top: var(--space-md); }
+    .mb-sm { margin-bottom: var(--space-sm); }
+
+    /* Print & Accessibility */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    @media (max-width: 640px) {
+      .page-grid { padding: var(--space-sm); }
+      .nav-tabs { gap: 0; }
+      .tab-btn { font-size: 0.85rem; padding: var(--space-xs) var(--space-sm); }
+    }
+  </style>
+</head>
+<body>
+  <noscript>
+    <div style="margin: 16px; padding: 16px; border: 1px solid #da1e28; background: #fff5f5; color: #161616; font-family: sans-serif;">
+      Este simulador necesita JavaScript para calcular métricas, dibujar los gráficos y ejecutar el evaluador 5G.
+      Activa JavaScript en tu navegador para verlo completo.
+    </div>
+  </noscript>
+
+<div class="page-grid">
+
+  <!-- ==================== ENCABEZADO TÉCNICO ==================== -->
+  <header>
+    <div class="flex-row space-between" style="flex-wrap: wrap; gap: var(--space-md);">
+      <div>
+        <div class="label">Sistemas de Comunicación • Análisis de Arquitecturas de RF</div>
+        <h1 class="page-title">
+          Arquitectura <strong>HDR (ASIC)</strong> vs. <strong>SDR (FPGA + DSP)</strong>
+        </h1>
+        <p class="page-subtitle">
+          Explorador interactivo de procesamiento de señal, comparativa en tiempo real de cadenas analógicas y digitales,
+          virtualización en Open RAN (vRAN) y evaluación física de hardware comercial para redes 5G privadas.
+        </p>
+      </div>
+
+      <!-- Live Global Status Strip & Author Badge -->
+      <div class="flex-row gap-sm" style="flex-wrap: wrap;">
+        <span class="badge" role="button" tabindex="0" style="background-color: #003366; color: #ffffff; border: 1px solid #002244; cursor: pointer;" onclick="scrollToCredits()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollToCredits();}" title="Ver datos de autoría y tutor">
+          <i data-lucide="user-check" style="width: 14px; height: 14px;"></i> Autor: Reibeiro Velasquez (Grupo 33)
+        </span>
+        <span class="badge badge-neutral" id="global-sim-state">
+          <i data-lucide="activity" style="width: 14px; height: 14px;"></i> Pipeline: Activo
+        </span>
+        <span class="badge badge-sdr" id="global-dsp-clock">
+          <i data-lucide="cpu" style="width: 14px; height: 14px;"></i> SDR Core: FPGA + DSP Host
+        </span>
+      </div>
+    </div>
+
+    <!-- Metric Tiles Overview -->
+    <div class="metric-strip mt-md">
+      <div class="metric-tile indicated-hdr">
+        <span class="label">Hardware Tradicional (HDR / ASIC)</span>
+        <span class="key-value text-mono" style="color: var(--error);">0% Reconf.</span>
+        <span class="node-desc">Frecuencia y modulación inmutables en placa PCB</span>
+      </div>
+      <div class="metric-tile indicated">
+        <span class="label">Radio por Software (SDR / FPGA)</span>
+        <span class="key-value text-mono" style="color: var(--primary);">100% Ágil</span>
+        <span class="node-desc">Reconfiguración en caliente de filtros, I/Q y 3GPP</span>
+      </div>
+      <div class="metric-tile">
+        <span class="label">Límite Digital (ADC / DAC)</span>
+        <span class="key-value text-mono">Zero-IF</span>
+        <span class="node-desc">Muestreo en cuadratura directa junto a la antena</span>
+      </div>
+      <div class="metric-tile">
+        <span class="label">Requisito SSB 5G-NR (FR1)</span>
+        <span class="key-value text-mono">= 7.2 MHz</span>
+        <span class="node-desc">20 PRB × 12 subportadoras × 30 kHz SCS</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs mt-md" role="tablist" aria-label="Secciones del simulador">
+      <button type="button" class="tab-btn is-active" id="tab-btn-arch" onclick="switchMainTab('arch')" role="tab" aria-selected="true" aria-controls="tab-panel-arch" title="Explorador Arquitectónico HDR vs. SDR">
+        <i data-lucide="split" style="width: 16px; height: 16px;"></i>
+        1. Arquitectura HDR vs. SDR
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-lab" onclick="switchMainTab('lab')" role="tab" aria-selected="false" aria-controls="tab-panel-lab" tabindex="-1" title="Laboratorio de Señales en Tiempo Real">
+        <i data-lucide="audio-waveform" style="width: 16px; height: 16px;"></i>
+        2. Laboratorio de Señales
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-hw" onclick="switchMainTab('hw')" role="tab" aria-selected="false" aria-controls="tab-panel-hw" tabindex="-1" title="Comparativa de Hardware y Viabilidad 5G">
+        <i data-lucide="hard-drive" style="width: 16px; height: 16px;"></i>
+        3. Hardware y Viabilidad 5G
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-oran" onclick="switchMainTab('oran')" role="tab" aria-selected="false" aria-controls="tab-panel-oran" tabindex="-1" title="Open RAN (O-RAN) y Sensado IA">
+        <i data-lucide="network" style="width: 16px; height: 16px;"></i>
+        4. Open RAN y Sensado IA
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-soft" onclick="switchMainTab('soft')" role="tab" aria-selected="false" aria-controls="tab-panel-soft" tabindex="-1" title="Ecosistema de Software SDR">
+        <i data-lucide="terminal" style="width: 16px; height: 16px;"></i>
+        5. Ecosistema de Software
+      </button>
+    </nav>
+  </header>
+
+
+  <!-- ================================================================ -->
+  <!-- TAB 1: EXPLORADOR ARQUITECTÓNICO INTERACTIVO                    -->
+  <!-- ================================================================ -->
+  <main id="main-content">
+  <section id="tab-panel-arch" role="tabpanel" aria-labelledby="tab-btn-arch">
+    <div class="split-main-side">
+
+      <!-- Left Column: Side by Side Pipelines -->
+      <div>
+        <div class="section-head mb-sm">
+          <div>
+            <h2 class="section-title">Diagrama Funcional Comparativo por Bloques</h2>
+            <p class="node-desc">
+              Selecciona cualquier etapa para inspeccionar su física interna, ecuaciones de transferencia,
+              y la diferencia entre implementación analógica estática vs. lógica reconfigurable.
+            </p>
+          </div>
+          <div class="flex-row gap-sm">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="highlightComparison('rf')">Frente RF</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="highlightComparison('mix')">Mezcla / I-Q</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="highlightComparison('filter')">Filtrado</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="highlightComparison('demod')">Demod / FEC</button>
+          </div>
+        </div>
+
+        <div class="arch-grid">
+
+          <!-- COLUMNA HDR (HARDWARE DEFINED RADIO) -->
+          <div class="pipeline-column">
+            <div class="pipeline-column-header">
+              <span class="badge badge-hdr">
+                <i data-lucide="shield-alert" style="width: 12px; height: 12px;"></i>
+                HDR Tradicional (ASICs)
+              </span>
+              <span class="label">Circuitería Cableada</span>
+            </div>
+
+            <!-- HDR Node 1: Antena -->
+            <div class="flow-node active-node-hdr" id="node-hdr-ant" onclick="inspectBlock('hdr_ant')">
+              <div class="node-num" style="color: var(--error);">01</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Antena RF Dedicada</span>
+                  <span class="node-tag">Banda Fija</span>
+                </div>
+                <div class="node-desc">Captura electromagnética para canal o banda específica sintonizada.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- HDR Node 2: LNA -->
+            <div class="flow-node" id="node-hdr-lna" onclick="inspectBlock('hdr_lna')">
+              <div class="node-num" style="color: var(--error);">02</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>LNA (Amplificador Bajo Ruido)</span>
+                  <span class="node-tag">Analógico</span>
+                </div>
+                <div class="node-desc">Amplificación primaria limitando la figura de ruido total (Friis).</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- HDR Node 3: Filtro RF Fijo -->
+            <div class="flow-node" id="node-hdr-bpf" onclick="inspectBlock('hdr_bpf')">
+              <div class="node-num" style="color: var(--error);">03</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Filtro RF Pasabanda Fijo</span>
+                  <span class="node-tag">SAW / Cavidad</span>
+                </div>
+                <div class="node-desc">Rechazo de frecuencia imagen con componentes pasivos inalterables.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- HDR Node 4: Mezclador Analógico & LO Fijo -->
+            <div class="flow-node" id="node-hdr-mix" onclick="inspectBlock('hdr_mix')">
+              <div class="node-num" style="color: var(--error);">04</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Mezclador Analógico + LO Fijo</span>
+                  <span class="node-tag">Superheterodino</span>
+                </div>
+                <div class="node-desc">Multiplicador RF no lineal con Oscilador Local analógico a $f_{LO}$ rígida.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- HDR Node 5: Filtro IF Fijo -->
+            <div class="flow-node" id="node-hdr-if" onclick="inspectBlock('hdr_if')">
+              <div class="node-num" style="color: var(--error);">05</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Filtro IF de Frecuencia Intermedia</span>
+                  <span class="node-tag">Analógico IF</span>
+                </div>
+                <div class="node-desc">Filtrado de canal en frecuencia fija (ej. 10.7 MHz o 455 kHz).</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- HDR Node 6: Demodulador ASIC Fijo -->
+            <div class="flow-node" id="node-hdr-asic" onclick="inspectBlock('hdr_asic')">
+              <div class="node-num" style="color: var(--error);">06</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Demodulador ASIC Fijo</span>
+                  <span class="node-tag">Silicio Dedicado</span>
+                </div>
+                <div class="node-desc">Detector físico soldado (AM/FM o QAM cableado). Cero reconfiguración.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- HDR Node 7: Salida de Datos -->
+            <div class="flow-node" id="node-hdr-out" onclick="inspectBlock('hdr_out')">
+              <div class="node-num" style="color: var(--error);">07</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Salida de Datos / Banda Base</span>
+                  <span class="node-tag">Salida Final</span>
+                </div>
+                <div class="node-desc">Audio analógico o flujo binario rígido entregado al usuario.</div>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- COLUMNA SDR (SOFTWARE DEFINED RADIO) -->
+          <div class="pipeline-column">
+            <div class="pipeline-column-header">
+              <span class="badge badge-sdr">
+                <i data-lucide="cpu" style="width: 12px; height: 12px;"></i>
+                SDR Moderno (FPGA + DSP)
+              </span>
+              <span class="label">Dominio Reconfigurable</span>
+            </div>
+
+            <!-- SDR Node 1: Antena Banda Ancha -->
+            <div class="flow-node active-node-sdr" id="node-sdr-ant" onclick="inspectBlock('sdr_ant')">
+              <div class="node-num" style="color: var(--primary);">01</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Antena de Banda Ancha</span>
+                  <span class="node-tag">Ágil (70 MHz - 6 GHz)</span>
+                </div>
+                <div class="node-desc">Recepción/transmisión multi-estándar continua sin reemplazo de mástil.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- SDR Node 2: Front-End RF LNA/PA -->
+            <div class="flow-node" id="node-sdr-fe" onclick="inspectBlock('sdr_fe')">
+              <div class="node-num" style="color: var(--primary);">02</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Front-End RF (LNA / PA Conmutable)</span>
+                  <span class="node-tag">Full-Dúplex FDD/TDD</span>
+                </div>
+                <div class="node-desc">Preecualización de ganancia ágil controlada por bus SPI en tiempo real.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- SDR Node 3: Filtro RF Sintonizable -->
+            <div class="flow-node" id="node-sdr-tunable" onclick="inspectBlock('sdr_tunable')">
+              <div class="node-num" style="color: var(--primary);">03</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Filtro RF Sintonizable por Software</span>
+                  <span class="node-tag">Preselección Dinámica</span>
+                </div>
+                <div class="node-desc">Varactores y bancos LC conmutados por firmware para eliminar armónicos.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- SDR Node 4: Transceptor RF I/Q Cuadratura -->
+            <div class="flow-node" id="node-sdr-iq" onclick="inspectBlock('sdr_iq')">
+              <div class="node-num" style="color: var(--primary);">04</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Transceptor RF Cuadratura (I / Q)</span>
+                  <span class="node-tag">Direct Conversion (Zero-IF)</span>
+                </div>
+                <div class="node-desc">Mezcladores ortogonales $(\cos / \sin)$ para descomposición directa en banda base.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- SDR Node 5: Conversores ADC / DAC -->
+            <div class="flow-node" id="node-sdr-adc" onclick="inspectBlock('sdr_adc')">
+              <div class="node-num" style="color: var(--primary);">05</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Conversores ADC / DAC (I y Q)</span>
+                  <span class="node-tag">12 - 14 bits @ 100+ MS/s</span>
+                </div>
+                <div class="node-desc">Límite analógico-digital movido directamente tras la cuadratura RF.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- SDR Node 6: FPGA Core -->
+            <div class="flow-node" id="node-sdr-fpga" onclick="inspectBlock('sdr_fpga')">
+              <div class="node-num" style="color: var(--primary);">06</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>FPGA Core (DDC / DUC & FFT)</span>
+                  <span class="node-tag">Paralelismo Masivo</span>
+                </div>
+                <div class="node-desc">Conversión descendente digital, diezmado CIC, interpolación e IFFT/FFT 5G.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- SDR Node 7: Bus de Transporte -->
+            <div class="flow-node" id="node-sdr-bus" onclick="inspectBlock('sdr_bus')">
+              <div class="node-num" style="color: var(--primary);">07</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>Bus Interfaz (PCIe / USB 3.0 / 10GbE)</span>
+                  <span class="node-tag">Flujo I/Q Digital</span>
+                </div>
+                <div class="node-desc">Streaming de muestras de alta velocidad sin pérdida hacia el host.</div>
+              </div>
+            </div>
+            <div class="flow-arrow-down"><i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i></div>
+
+            <!-- SDR Node 8: DSP / Host CPU -->
+            <div class="flow-node" id="node-sdr-cpu" onclick="inspectBlock('sdr_cpu')">
+              <div class="node-num" style="color: var(--primary);">08</div>
+              <div class="node-content">
+                <div class="node-title">
+                  <span>DSP / Host CPU (vRAN & Pila 3GPP)</span>
+                  <span class="node-tag">Reconfigurabilidad Total</span>
+                </div>
+                <div class="node-desc">Filtrado RRC adaptativo, FEC (LDPC / Polar), MAC, RLC y O-RAN vRAN.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Right Column: Inspector Panel -->
+      <aside class="inspector-panel" id="inspector-aside" aria-label="Inspector del bloque seleccionado" aria-live="polite">
+        <div class="flex-row space-between">
+          <span class="label" id="insp-domain">DOMINIO ANALÓGICO RF</span>
+          <span class="badge badge-hdr" id="insp-badge">HDR Tradicional</span>
+        </div>
+
+        <div>
+          <h3 id="insp-title" style="font-size: 1.25rem; font-weight: 600;">Antena RF Dedicada</h3>
+          <p id="insp-sub" class="node-desc" style="margin-top: 4px;">Elemento captador electromagnético pasivo</p>
+        </div>
+
+        <div class="layer-high" style="border-left: 2px solid var(--primary);">
+          <div class="label mb-sm">Función Física y Ecuaciones</div>
+          <div id="insp-math" class="text-mono" style="font-size: 0.82rem; line-height: 1.6;">
+            Conversión de campo incidente $E(t)$ a voltaje $V_{ant}(t)$. Impedancia $Z_0 = 50\,\Omega$.
+          </div>
+        </div>
+
+        <div>
+          <div class="label mb-sm">Parámetros Críticos</div>
+          <div id="insp-params" style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 6px;">
+            <div class="flex-row space-between">
+              <span class="text-muted">Ancho de Banda:</span>
+              <span class="text-mono fw-600">Estrecho (~20 MHz fijo)</span>
+            </div>
+            <div class="flex-row space-between">
+              <span class="text-muted">Reconfigurabilidad:</span>
+              <span class="text-mono">0% (Inmutable)</span>
+            </div>
+            <div class="flex-row space-between">
+              <span class="text-muted">Costo de Adaptación:</span>
+              <span class="text-mono">Sustitución mecánica</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout" id="insp-callout">
+          <div class="callout-title" id="insp-callout-title">Contraste con SDR</div>
+          <div id="insp-callout-body" style="font-size: 0.85rem;">
+            En SDR, las antenas operan en frentes de preselección ultrabanda ancha (70 MHz a 6 GHz) con acopladores
+            reconfigurables, permitiendo que una misma antena reciba transmisiones satelitales, LTE o 5G-NR.
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-sm" onclick="sendToSignalLabFromInspector()">
+          <i data-lucide="play" style="width: 14px; height: 14px;"></i>
+          Probar Señal en Este Bloque
+        </button>
+      </aside>
+
+    </div>
+  </section>
+
+
+  <!-- ================================================================ -->
+  <!-- TAB 2: LABORATORIO DE PROCESAMIENTO EN TIEMPO REAL              -->
+  <!-- ================================================================ -->
+  <section id="tab-panel-lab" role="tabpanel" aria-labelledby="tab-btn-lab" style="display: none;">
+    <div class="section-head mb-md">
+      <div>
+        <h2 class="section-title">Laboratorio de Procesamiento de Señales en Tiempo Real</h2>
+        <p class="node-desc">
+          Simula señales multiestándar a lo largo de las etapas de recepción. Modifica la relación señal a ruido (SNR),
+          la cuantización del ADC y observa en vivo la constelación I/Q, espectro FFT y degradación de EVM.
+        </p>
+      </div>
+      <div class="flex-row gap-sm">
+        <button type="button" class="btn btn-primary btn-sm" id="btn-toggle-sim" onclick="toggleSimulation()">
+          <i data-lucide="pause" id="sim-icon" style="width: 14px; height: 14px;"></i>
+          <span id="sim-text">Pausar Señal</span>
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="resetSimParams()">Restablecer Valores</button>
+      </div>
+    </div>
+
+    <div class="sim-grid">
+
+      <!-- Controles de Simulación -->
+      <div class="controls-box">
+        <div class="label" style="border-bottom: var(--rule); padding-bottom: 4px;">Configuración de Señal de Entrada</div>
+
+        <div class="control-group">
+          <label class="control-label" for="sel-signal-type">Tipo de Modulación / Estándar</label>
+          <select id="sel-signal-type" onchange="onSignalTypeChange()">
+            <option value="5g_qam256">5G-NR Subportadoras (256-QAM OFDM)</option>
+            <option value="5g_qam64" selected>5G-NR Bloque SSB (64-QAM OFDM)</option>
+            <option value="cellular_qpsk">Celular / Satelital (QPSK Digital)</option>
+            <option value="qam16">Banda Ancha Digital (16-QAM)</option>
+            <option value="analog_fm">Radiodifusión Analógica (FM Comercial)</option>
+            <option value="interf_awgn">Interferencia Co-canal + Ruido Térmico</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="sel-probe-point">
+            <span>Punto de Inspección (Test Probe)</span>
+          </label>
+          <select id="sel-probe-point" onchange="onProbePointChange()">
+            <option value="rf_in">Punto A: Entrada de Antena RF (Con Ruido)</option>
+            <option value="post_lna">Punto B: Salida LNA (Amplificada)</option>
+            <option value="iq_baseband">Punto C: Mezclador / Downconverter I-Q</option>
+            <option value="post_adc" selected>Punto D: Cuantización ADC / Muestreo</option>
+            <option value="post_filter">Punto E: Filtrado Digital RRC / DDC</option>
+            <option value="demod_out">Punto F: Constelación / Decodificación Host</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="slider-snr">
+            <span>Relación Señal/Ruido (SNR)</span>
+            <span class="control-val text-mono" id="disp-snr">24 dB</span>
+          </label>
+          <input type="range" id="slider-snr" min="-10" max="45" value="24" step="1" oninput="syncSNR(this.value)">
+          <span class="node-desc" style="font-size: 0.72rem;">Impacto térmico $P_n = k \cdot T \cdot B$</span>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="slider-bits">
+            <span>Resolución de Muestreo (ADC)</span>
+            <span class="control-val text-mono" id="disp-bits">12 bits (USRP)</span>
+          </label>
+          <input type="range" id="slider-bits" min="4" max="16" value="12" step="2" oninput="syncBits(this.value)">
+          <span class="node-desc" style="font-size: 0.72rem;">SQNR teórico de cuantización: <strong class="text-mono" id="disp-dyn-range">74.0 dB</strong></span>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="slider-ppm">
+            <span>Deriva de Oscilador (PPM)</span>
+            <span class="control-val text-mono" id="disp-ppm">0.1 ppm</span>
+          </label>
+          <input type="range" id="slider-ppm" min="0" max="40" value="0.1" step="0.1" oninput="syncPPM(this.value)">
+          <span class="node-desc" style="font-size: 0.72rem;">RTL-SDR: ~30 ppm | USRP GPSDO: &lt; 0.05 ppm</span>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="sel-filter-type">
+            <span>Filtro de Canal / Conformación</span>
+          </label>
+          <select id="sel-filter-type" onchange="onFilterChange()">
+            <option value="rrc_035">Raíz de Coseno Alzado (RRC, α = 0.35, Nyquist)</option>
+            <option value="rrc_020">RRC Ultra-estricto (α = 0.20, 5G-NR)</option>
+            <option value="analog_cheb">Filtro Analógico Rígido (Chebyshev 4to Orden)</option>
+            <option value="none">Sin Filtrado (Pasa-todo)</option>
+          </select>
+        </div>
+
+        <!-- Live Metrics Box -->
+        <div class="layer-high" style="padding: var(--space-sm);">
+          <div class="label mb-sm">Métricas de Enlace Calculadas</div>
+          <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem;">
+            <div class="flex-row space-between">
+              <span class="text-muted">EVM Estimada:</span>
+              <span class="text-mono fw-600" id="live-evm">—</span>
+            </div>
+            <div class="flex-row space-between">
+              <span class="text-muted">Aptitud 3GPP según modulación:</span>
+              <span class="status-pill" id="live-3gpp-status">Calculando…</span>
+            </div>
+            <div class="flex-row space-between">
+              <span class="text-muted">PAPR de Señal:</span>
+              <span class="text-mono" id="live-papr">≈8.4 dB</span>
+            </div>
+            <div class="flex-row space-between">
+              <span class="text-muted">Tasa de Error de Bits (BER):</span>
+              <span class="text-mono" id="live-ber">—</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 4 Visualizadores en Canvas -->
+      <div class="canvas-grid-2x2">
+
+        <!-- Visualizador 1: Osciloscopio Temporal I/Q -->
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <span class="canvas-title">
+              <i data-lucide="waves" style="width: 16px; height: 16px; color: var(--primary);"></i>
+              Osciloscopio Temporal $I(t)$ y $Q(t)$
+            </span>
+            <span class="label text-mono" id="scope-timebase">Base: 5 µs/div</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas-oscilloscope" role="img" aria-label="Osciloscopio: forma de onda de las señales en fase y cuadratura en el dominio del tiempo"></canvas>
+          </div>
+          <div class="flex-row space-between text-muted" style="font-size: 0.72rem;">
+            <span class="text-mono" style="color: #185abd;">● Canal en Fase I(t)</span>
+            <span class="text-mono" style="color: #b31b3c;">● Canal Cuadratura Q(t)</span>
+            <span class="text-mono" id="scope-probe-label">Punto D: Post-ADC</span>
+          </div>
+        </div>
+
+        <!-- Visualizador 2: Analizador de Espectro FFT -->
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <span class="canvas-title">
+              <i data-lucide="bar-chart-2" style="width: 16px; height: 16px; color: var(--tertiary);"></i>
+              Analizador de Espectro (PSD en dBm)
+            </span>
+            <span class="label text-mono" id="fft-span">Span: 40 MHz</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas-spectrum" role="img" aria-label="Analizador de espectro: densidad espectral de potencia de la señal en dBm"></canvas>
+          </div>
+          <div class="flex-row space-between text-muted" style="font-size: 0.72rem;">
+            <span class="text-mono">Piso Térmico: -98 dBm</span>
+            <span class="text-mono" style="color: #0e6027;">● Espectro Densidad de Potencia</span>
+            <span class="text-mono">BW Ocupado: 18.4 MHz</span>
+          </div>
+        </div>
+
+        <!-- Visualizador 3: Diagrama de Constelación I/Q -->
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <span class="canvas-title">
+              <i data-lucide="crosshair" style="width: 16px; height: 16px; color: var(--data-2);"></i>
+              Diagrama de Constelación I / Q
+            </span>
+            <span class="label text-mono" id="const-mod-name">64-QAM</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas-constellation" role="img" aria-label="Diagrama de constelación I/Q de la señal modulada"></canvas>
+          </div>
+          <div class="flex-row space-between text-muted" style="font-size: 0.72rem;">
+            <span class="text-mono">Dispersión por Ruido & Cuantización</span>
+            <span class="text-mono" id="const-points-count">Símbolos: 64</span>
+          </div>
+        </div>
+
+        <!-- Visualizador 4: Diagrama de Ojo / Dispersión Temporal -->
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <span class="canvas-title">
+              <i data-lucide="eye" style="width: 16px; height: 16px; color: #f1c21b;"></i>
+              Diagrama de Ojo (Apertura e ISI)
+            </span>
+            <span class="label text-mono" id="eye-state-label">Apertura: Óptima</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas-eye" role="img" aria-label="Diagrama de ojo: apertura e interferencia entre símbolos de la señal filtrada"></canvas>
+          </div>
+          <div class="flex-row space-between text-muted" style="font-size: 0.72rem;">
+            <span class="text-mono">Apertura del ojo: <strong id="eye-opening">93.7 %</strong></span>
+            <span class="text-mono">Mitigación ISI por RRC Nyquist</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================================================================ -->
+  <!-- TAB 3: COMPARATIVA DE HARDWARE & EVALUADOR 5G PRIVADO            -->
+  <!-- ================================================================ -->
+  <section id="tab-panel-hw" role="tabpanel" aria-labelledby="tab-btn-hw" style="display: none;">
+    <div class="section-head mb-md">
+      <div>
+        <h2 class="section-title">Comparativa de Plataformas SDR Comerciales & Viabilidad 5G Privada</h2>
+        <p class="node-desc">
+          Evaluación paramétrica rigurosa entre dispositivos de bajo costo (RTL-SDR, HackRF One) y transceptores
+          profesionales de laboratorio e industriales (Ettus USRP serie B/N) frente a las especificaciones 3GPP.
+        </p>
+      </div>
+      <div class="flex-row gap-sm">
+        <span class="badge badge-sdr">Norma 3GPP Rel-15/16/17</span>
+      </div>
+    </div>
+
+    <!-- Comparative Table -->
+    <div class="layer" style="padding: 0; overflow-x: auto; margin-bottom: var(--space-md);">
+      <table class="hw-table">
+        <thead>
+          <tr>
+            <th>Parámetro Técnico</th>
+            <th>RTL-SDR (v3/v4 R820T/R828D)</th>
+            <th>HackRF One (Great Scott Gadgets)</th>
+            <th>Ettus USRP (B210 / N210 / X310)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fw-600">Rango de Frecuencia</td>
+            <td>
+              <span class="text-mono">24 MHz – 1.76 GHz</span><br>
+              <span class="node-desc">Muestreo directo HF (500 kHz - 24 MHz)</span>
+            </td>
+            <td>
+              <span class="text-mono">1 MHz – 6.0 GHz continuo</span><br>
+              <span class="node-desc">Cubre HF, VHF, UHF, ISM, Wi-Fi</span>
+            </td>
+            <td>
+              <span class="text-mono fw-600">70 MHz – 6.0 GHz continuo</span><br>
+              <span class="node-desc">B210 integrado AD9361; tarjetas WBX/UBX en N210</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="fw-600">Ancho de Banda Instantáneo</td>
+            <td>
+              <span class="text-mono" style="color: var(--error);">~2.4 MHz estable</span><br>
+              <span class="node-desc">Hasta 3.2 MHz con pérdida severa de muestras</span>
+            </td>
+            <td>
+              <span class="text-mono">Hasta 20 MHz</span><br>
+              <span class="node-desc">Adecuado para Wi-Fi 802.11g y LTE de 10 MHz</span>
+            </td>
+            <td>
+              <span class="text-mono fw-600" style="color: var(--primary);">56 MHz (SISO) / 30.72 MHz (MIMO)</span><br>
+              <span class="node-desc">Hasta 160 MHz en X310 / 200 MHz por canal en N320</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="fw-600">Capacidad Dúplex</td>
+            <td>
+              <span class="status-pill status-fail">Simplex (RX Only)</span><br>
+              <span class="node-desc">Carece físicamente de circuitería de transmisión</span>
+            </td>
+            <td>
+              <span class="status-pill status-warn">Half-Dúplex</span><br>
+              <span class="node-desc">Transmite o recibe, no simultáneo (conmutación electrónica)</span>
+            </td>
+            <td>
+              <span class="status-pill status-pass">Full-Dúplex Real (FDD/TDD)</span><br>
+              <span class="node-desc">TX y RX independientes con AD9361 y FPGA</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="fw-600">Resolución ADC / DAC</td>
+            <td>
+              <span class="text-mono" style="color: var(--error);">8 bits (Recepción)</span><br>
+              <span class="node-desc">Rango dinámico máx: ~50 dB</span>
+            </td>
+            <td>
+              <span class="text-mono">8 bits ADC / 8 bits DAC</span><br>
+              <span class="node-desc">Conversor MAX5864</span>
+            </td>
+            <td>
+              <span class="text-mono fw-600" style="color: var(--primary);">12 bits (B210) a 14/16 bits (N210)</span><br>
+              <span class="node-desc">Rango dinámico: 74 dB a 86 dB</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="fw-600">Estabilidad de Oscilador</td>
+            <td>
+              <span class="text-mono" style="color: var(--error);">&gt; 20 – 50 ppm</span><br>
+              <span class="node-desc">Deriva de frecuencia sin termocompensación</span>
+            </td>
+            <td>
+              <span class="text-mono">~20 ppm (Soporta TCXO mod)</span><br>
+              <span class="node-desc">Reloj base de 10 MHz susceptible a calor</span>
+            </td>
+            <td>
+              <span class="text-mono fw-600" style="color: var(--primary);">±2.0 ppm (B210) / 2.5 ppm (X310)</span><br>
+              <span class="node-desc">GPSDO opcional: &lt; 1 ppb con lock</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="fw-600">Aptitud para 5G Privada (gNodeB)</td>
+            <td>
+              <span class="status-pill status-fail">INVIABLE AL 100%</span>
+            </td>
+            <td>
+              <span class="status-pill status-fail">INAPTO PARA gNodeB</span>
+            </td>
+            <td>
+              <span class="status-pill status-pass">ESTÁNDAR EN PRODUCCIÓN</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Interactive 5G Deployment Feasibility Evaluator -->
+    <div class="section-head mb-sm mt-md">
+      <div>
+        <h3 class="section-title" style="font-size: 1.15rem;">
+          Calculadora de Viabilidad 5G-NR Privada (3GPP Compliance Engine)
+        </h3>
+        <p class="node-desc">
+          Selecciona un hardware SDR y configura los parámetros de red celular privada deseados para comprobar
+          matemáticamente si cumple con las restricciones físicas de la estación base gNodeB.
+        </p>
+      </div>
+    </div>
+
+    <div class="split-side-main">
+
+      <!-- Evaluator Inputs -->
+      <div class="controls-box">
+        <div class="label">Parámetros del Despliegue 5G</div>
+
+        <div class="control-group">
+          <label class="control-label" for="eval-hw-choice">Plataforma Hardware a Evaluar</label>
+          <select id="eval-hw-choice" onchange="run5GEvaluation()">
+            <option value="rtlsdr">RTL-SDR v3/v4 (Realtek RTL2832U)</option>
+            <option value="hackrf">Great Scott Gadgets HackRF One</option>
+            <option value="usrp_b210" selected>Ettus USRP B210 (AD9361 + Spartan-6)</option>
+            <option value="usrp_x310">Ettus USRP X310 (Kintex-7 + Dual 10GbE)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="eval-band">Banda 5G-NR (FR1 Sub-6 GHz)</label>
+          <select id="eval-band" onchange="run5GEvaluation()">
+            <option value="n78" selected>Banda n78 (3.3 GHz – 3.8 GHz) Privada</option>
+            <option value="n77">Banda n77 (3.3 GHz – 4.2 GHz)</option>
+            <option value="n41">Banda n41 (2.5 GHz BRS/EBS)</option>
+            <option value="n28">Banda n28 (700 MHz APT)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="eval-bw">Ancho de Banda de Portadora (Canal 5G)</label>
+          <select id="eval-bw" onchange="run5GEvaluation()">
+            <option value="5">5 MHz (Mínimo de canal NR en FR1)</option>
+            <option value="10">10 MHz</option>
+            <option value="20" selected>20 MHz (Bloque celular típico)</option>
+            <option value="40">40 MHz (Alta velocidad privada)</option>
+            <option value="100">100 MHz (Máximo bloque FR1)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="eval-duplex">Modo Dúplex Requerido</label>
+          <select id="eval-duplex" onchange="run5GEvaluation()">
+            <option value="tdd" selected>TDD (División de Tiempo, slots sub-ms)</option>
+            <option value="fdd">FDD (División de Frecuencia simultánea)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="eval-mod">Modulación de Tráfico Máxima</label>
+          <select id="eval-mod" onchange="run5GEvaluation()">
+            <option value="qpsk">QPSK (Control / Señalización)</option>
+            <option value="qam64">64-QAM (Tráfico promedio)</option>
+            <option value="qam256" selected>256-QAM (Alta eficiencia espectral)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="eval-role">Rol de la Radio en la Red</label>
+          <select id="eval-role" onchange="run5GEvaluation()">
+            <option value="gnodeb" selected>Estación Base Transmisora / gNodeB</option>
+            <option value="sniffer">Sniffer Pasivo (Solo Monitoreo)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Evaluator Output Matrix -->
+      <div class="eval-card">
+        <div class="flex-row space-between" aria-live="polite" aria-atomic="true" style="border-bottom: var(--rule); padding-bottom: var(--space-sm);">
+          <div>
+            <span class="label">Diagnóstico de Cumplimiento Técnico 3GPP</span>
+            <h4 id="eval-verdict-title" style="font-size: 1.1rem; font-weight: 600; margin-top: 2px;">
+              Evaluando la configuración seleccionada…
+            </h4>
+          </div>
+          <span class="status-pill" id="eval-verdict-badge">CALCULANDO</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: var(--space-sm); margin-top: var(--space-xs);">
+
+          <!-- Check 1: Transmisión -->
+          <div class="eval-check pass" id="check-tx">
+            <div id="icon-check-tx"><i data-lucide="check-circle" style="color: var(--positive); width: 18px; height: 18px;"></i></div>
+            <div style="font-size: 0.85rem;">
+              <strong>1. Cadena de Transmisión (TX) y DAC:</strong>
+              <div id="desc-check-tx" class="text-muted">
+                Dispone de Convertidor Digital-Analógico (DAC de 12 bits) y modulador ascendente para emitir portadoras RF.
+              </div>
+            </div>
+          </div>
+
+          <!-- Check 2: Duplex y Sincronismo -->
+          <div class="eval-check pass" id="check-duplex">
+            <div id="icon-check-duplex"><i data-lucide="check-circle" style="color: var(--positive); width: 18px; height: 18px;"></i></div>
+            <div style="font-size: 0.85rem;">
+              <strong>2. Capacidad Full-Dúplex & Conmutación TDD Sub-milisegundo:</strong>
+              <div id="desc-check-duplex" class="text-muted">
+                Transceptor Full-Dúplex real con conmutación TDD en el orden de microsegundos para canales PDCCH/PUCCH y PRACH.
+              </div>
+            </div>
+          </div>
+
+          <!-- Check 3: Ancho de Banda -->
+          <div class="eval-check pass" id="check-bw">
+            <div id="icon-check-bw"><i data-lucide="check-circle" style="color: var(--positive); width: 18px; height: 18px;"></i></div>
+            <div style="font-size: 0.85rem;">
+              <strong>3. Ancho de Banda Instantáneo vs. Bloque SSB 5G (3.6 MHz a 15 kHz / 7.2 MHz a 30 kHz):</strong>
+              <div id="desc-check-bw" class="text-muted">
+                Soporta 56 MHz en tiempo real, cubriendo holgadamente el canal configurado de 20 MHz y el bloque SSB.
+              </div>
+            </div>
+          </div>
+
+          <!-- Check 4: Cobertura de Frecuencia -->
+          <div class="eval-check pass" id="check-freq">
+            <div id="icon-check-freq"><i data-lucide="check-circle" style="color: var(--positive); width: 18px; height: 18px;"></i></div>
+            <div style="font-size: 0.85rem;">
+              <strong>4. Cobertura de la Banda 5G-NR Seleccionada:</strong>
+              <div id="desc-check-freq" class="text-muted">
+                El equipo debe sintonizar la banda elegida (n78, n77, n41 o n28).
+              </div>
+            </div>
+          </div>
+
+          <!-- Check 5: Rango Dinámico y Cuantización -->
+          <div class="eval-check pass" id="check-adc">
+            <div id="icon-check-adc"><i data-lucide="check-circle" style="color: var(--positive); width: 18px; height: 18px;"></i></div>
+            <div style="font-size: 0.85rem;">
+              <strong>5. Rango Dinámico ADC / DAC frente al PAPR de 5G:</strong>
+              <div id="desc-check-adc" class="text-muted">
+                El ADC debe cubrir el mínimo de bits de la modulación elegida; el SQNR de cuantización es una condición necesaria, no suficiente, para el EVM.
+              </div>
+            </div>
+          </div>
+
+          <!-- Check 6: Estabilidad de Reloj -->
+          <div class="eval-check pass" id="check-clock">
+            <div id="icon-check-clock"><i data-lucide="check-circle" style="color: var(--positive); width: 18px; height: 18px;"></i></div>
+            <div style="font-size: 0.85rem;">
+              <strong>6. Estabilidad del Oscilador Local & Soporte GPSDO:</strong>
+              <div id="desc-check-clock" class="text-muted">
+                TCXO de ±2.0 ppm (B210) o 2.5 ppm (X310); con GPSDO bloqueado se alcanza &lt; 0.001 ppm para el sincronismo de ranura 3GPP.
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Technical Explanation Box -->
+        <div class="callout mt-sm">
+          <div class="callout-title">Fundamentación Teórica y Matemática</div>
+          <div id="eval-theory-text" style="font-size: 0.85rem; line-height: 1.5;">
+            El estándar 3GPP para 5G-NR exige que una estación base transmita sincrónicamente el bloque de señales
+            de sincronización (SSB: PSS, SSS y PBCH), el cual consta de exactamente 20 Bloques de Recursos Físicos (PRB).
+            A un espaciado entre subportadoras (SCS) de 30 kHz:
+            $$BW_{SSB} = 20 \times 12 \times 30\text{ kHz} = 7.2\text{ MHz}$$
+            Un receptor como el RTL-SDR, limitado a 2.4 MHz estables y carente de DAC/TX, es físicamente incapaz
+            siquiera de demodular el bloque SSB completo, además de no poder responder a solicitudes de enlace uplink (PRACH).
+          </div>
+          <div id="eval-explanation-text" style="font-size: 0.85rem; line-height: 1.5; margin-top: var(--space-xs); padding-top: var(--space-xs); border-top: var(--rule);">
+            <span class="text-muted">Evaluando la configuración seleccionada…</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================================================================ -->
+  <!-- TAB 4: OPEN RAN (O-RAN), vRAN & SENSADO IA                     -->
+  <!-- ================================================================ -->
+  <section id="tab-panel-oran" role="tabpanel" aria-labelledby="tab-btn-oran" style="display: none;">
+    <div class="section-head mb-md">
+      <div>
+        <h2 class="section-title">Open RAN (O-RAN), Virtualización 5G y Sensado Inteligente con IA</h2>
+        <p class="node-desc">
+          Explora cómo la tecnología SDR permite desagregar las estaciones base cerradas en unidades O-RU, O-DU y O-CU
+          bajo el split 7.2x, y cómo el machine learning sobre muestras I/Q revoluciona el sensado espectral.
+        </p>
+      </div>
+    </div>
+
+    <!-- O-RAN Architecture Explorer -->
+    <div class="layer mb-md">
+      <div class="flex-row space-between" style="border-bottom: var(--rule); padding-bottom: var(--space-sm);">
+        <div>
+          <span class="label">Desagregación Modular de la Red de Acceso de Radio (RAN 5G)</span>
+          <h3 style="font-size: 1.15rem; font-weight: 600;">Arquitectura Desagregada Split 7.2x (3GPP / O-RAN Alliance)</h3>
+        </div>
+        <span class="badge badge-sdr">Estándares Abiertos eCPRI</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md); margin-top: var(--space-md);">
+
+        <!-- O-RU -->
+        <div class="layer-card active-sdr">
+          <div class="flex-row space-between mb-sm">
+            <span class="badge badge-sdr">En Mástil / Torre</span>
+            <span class="label text-mono">Split 7.2x</span>
+          </div>
+          <h4 style="font-size: 1.05rem; font-weight: 600;">O-RU (O-RAN Radio Unit)</h4>
+          <p class="node-desc" style="margin-top: 4px;">
+            Frente de RF analógico y convertidores ADC/DAC de altísima velocidad operando como un transceptor SDR dedicado.
+          </p>
+          <div class="mt-sm" style="font-size: 0.82rem; border-top: var(--rule); padding-top: var(--space-xs);">
+            <strong>Funciones Clave:</strong>
+            <ul style="margin: 4px 0 0 16px; padding: 0;" class="text-muted">
+              <li>Filtrado analógico y amplificación (LNA/PA)</li>
+              <li>Conversión directa I/Q y muestreo ADC/DAC</li>
+              <li>Transformada FFT / IFFT y compresión de muestras</li>
+              <li>Interfaz abierta <strong>eCPRI</strong> hacia la O-DU</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- O-DU -->
+        <div class="layer-card">
+          <div class="flex-row space-between mb-sm">
+            <span class="badge badge-neutral">Edge Computing</span>
+            <span class="label text-mono">Tiempo Real</span>
+          </div>
+          <h4 style="font-size: 1.05rem; font-weight: 600;">O-DU (Distributed Unit)</h4>
+          <p class="node-desc" style="margin-top: 4px;">
+            Ejecuta las capas físicas de tiempo real (High-PHY, MAC y RLC) virtualizadas en servidores estándar comerciales (COTS).
+          </p>
+          <div class="mt-sm" style="font-size: 0.82rem; border-top: var(--rule); padding-top: var(--space-xs);">
+            <strong>Funciones Clave:</strong>
+            <ul style="margin: 4px 0 0 16px; padding: 0;" class="text-muted">
+              <li>Codificación/decodificación de canal LDPC y Polar</li>
+              <li>Precodificación y conformación de haz (Beamforming)</li>
+              <li>Planificación de recursos MAC en sub-milisegundo</li>
+              <li>Aceleración vectorial x86 (Intel AVX-512) o GPUs</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- O-CU -->
+        <div class="layer-card">
+          <div class="flex-row space-between mb-sm">
+            <span class="badge badge-neutral">Centro de Datos / Nube</span>
+            <span class="label text-mono">Plano No Crítico</span>
+          </div>
+          <h4 style="font-size: 1.05rem; font-weight: 600;">O-CU (Centralized Unit)</h4>
+          <p class="node-desc" style="margin-top: 4px;">
+            Aloja las capas superiores de control y datos (PDCP, SDAP y RRC) en máquinas virtuales (VNF) o contenedores (CNF).
+          </p>
+          <div class="mt-sm" style="font-size: 0.82rem; border-top: var(--rule); padding-top: var(--space-xs);">
+            <strong>Funciones Clave:</strong>
+            <ul style="margin: 4px 0 0 16px; padding: 0;" class="text-muted">
+              <li>Gestión de movilidad y traspaso (Handover)</li>
+              <li>Cifrado y compresión de cabeceras PDCP</li>
+              <li>Rebanado de Red (Network Slicing) dinámico</li>
+              <li>Conexión con el núcleo de red 5G (5GC) y RIC</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- AI/ML Spectrum Sensing Demo -->
+    <div class="section-head mb-sm mt-md">
+      <div>
+        <h3 class="section-title" style="font-size: 1.15rem;">
+          Caso de Estudio: Sensado Espectral Inteligente (Spectrum Sensing) con IA/ML
+        </h3>
+        <p class="node-desc">
+          En Radio Cognitiva (bandas compartidas como CBRS a 3.5 GHz), los usuarios secundarios deben detectar portadoras
+          primarias en huecos espectrales (White Spaces). Compara la detección de energía analógica frente a redes neuronales.
+        </p>
+      </div>
+      <div class="flex-row gap-sm">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="triggerPrimaryPulse()">
+          <i data-lucide="zap" style="width: 14px; height: 14px;"></i>
+          Inyectar Portadora Primaria (Radar / 5G)
+        </button>
+      </div>
+    </div>
+
+    <div class="split-half">
+
+      <!-- Waterfall Canvas -->
+      <div class="canvas-card">
+        <div class="canvas-header">
+          <span class="canvas-title">
+            <i data-lucide="radio" style="width: 16px; height: 16px; color: var(--primary);"></i>
+            Espectrograma en Tiempo Real (Cascada / Waterfall)
+          </span>
+          <span class="label text-mono" id="waterfall-state">Escaneando: 3.55 GHz</span>
+        </div>
+        <div class="canvas-wrap waterfall-canvas">
+          <canvas id="canvas-waterfall" role="img" aria-label="Cascada espectral: evolución temporal del espectro detectado"></canvas>
+        </div>
+        <div class="flex-row space-between text-muted" style="font-size: 0.72rem;">
+          <span class="text-mono">Frecuencia: 3.50 GHz → 3.60 GHz (CBRS)</span>
+          <span class="text-mono" id="ai-detected-signal">Detectado: Solo Ruido Térmico</span>
+        </div>
+      </div>
+
+      <!-- Comparative Detection Panels -->
+      <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+
+        <!-- Analógico Clásico -->
+        <div class="layer" style="border-left: 3px solid var(--error); padding: var(--space-sm) var(--space-md);">
+          <div class="flex-row space-between">
+            <strong style="font-size: 0.92rem; color: #991b1b;">Detector de Energía Analógico Tradicional (HDR)</strong>
+            <span class="status-pill status-fail" id="status-energy-det">Falla con SNR &lt; 0 dB</span>
+          </div>
+          <p class="node-desc" style="margin-top: 4px;">
+            Mide únicamente la potencia integrada $P = \int |V(t)|^2 dt$ superando un umbral fijo $\gamma$.
+            Confunde ruido térmico elevado con transmisiones reales e ignora señales digitales ensanchadas.
+          </p>
+        </div>
+
+        <!-- Clasificación IA con SDR -->
+        <div class="layer" style="border-left: 3px solid var(--tertiary); padding: var(--space-sm) var(--space-md);">
+          <div class="flex-row space-between">
+            <strong style="font-size: 0.92rem; color: #0e6027;">Clasificador SDR con Deep Learning (CNN + LSTM)</strong>
+            <span class="status-pill status-pass" id="status-ai-det">Precisión estimada: 98.4 % (SNR = -6 dB)</span>
+          </div>
+          <p class="node-desc" style="margin-top: 4px;">
+            El SDR entrega matrices de muestras I/Q y espectrogramas tiempo-frecuencia a redes convolucionales.
+            Realiza <strong>Clasificación Automática de Modulación (AMC)</strong>, reconociendo patrones de radar o 5G-NR
+            en sub-milisegundos, permitiendo reconfigurar el SDR para no generar interferencia perjudicial.
+          </p>
+        </div>
+
+        <!-- Interactive Slider for Noise -->
+        <div class="layer-high" style="padding: var(--space-sm);">
+          <div class="control-group">
+            <label class="control-label" for="slider-sensing-snr">
+              <span>Ruido de Canal en Banda Cognitiva</span>
+              <span class="control-val text-mono" id="disp-sensing-snr">-6 dB (Extremo)</span>
+            </label>
+            <input type="range" id="slider-sensing-snr" min="-18" max="15" value="-6" step="1" oninput="updateSensingSNR(this.value)">
+          </div>
+          <div class="flex-row space-between mt-sm text-mono" style="font-size: 0.75rem;">
+            <span>Energía Clásica: <span id="sensing-classic-state" style="color: #a2191f;">FALLA (CONFUSIÓN CON RUIDO)</span></span>
+            <span>Inferencia CNN: <span id="sensing-ai-state" style="color: #0e6027;">DETECCIÓN EXACTA (CNN 98.4%)</span></span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================================================================ -->
+  <!-- TAB 5: COMPARATIVA DE SOFTWARE SDR                             -->
+  <!-- ================================================================ -->
+  <section id="tab-panel-soft" role="tabpanel" aria-labelledby="tab-btn-soft" style="display: none;">
+    <div class="section-head mb-md">
+      <div>
+        <h2 class="section-title">Ecosistema de Software SDR: GNU Radio vs. srsRAN vs. MATLAB</h2>
+        <p class="node-desc">
+          Comparativa técnica bajo los criterios de evaluación de la UNAD: curva de aprendizaje,
+          flexibilidad operativa y soporte de hardware comercial para investigación y despliegues de telecomunicaciones.
+        </p>
+      </div>
+    </div>
+
+    <!-- Software Table -->
+    <div class="layer" style="padding: 0; overflow-x: auto; margin-bottom: var(--space-md);">
+      <table class="hw-table">
+        <thead>
+          <tr>
+            <th>Criterio Técnico</th>
+            <th>GNU Radio (GRC)</th>
+            <th>srsRAN (antes srsLTE)</th>
+            <th>MATLAB LTE / 5G Toolbox</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fw-600">Curva de Aprendizaje</td>
+            <td>
+              <span class="status-pill status-warn">Media a Alta</span><br>
+              <span class="node-desc">
+                Interfaz gráfica basada en bloques (GRC) muy intuitiva, pero la creación de bloques personalizados
+                en C++ o Python y optimización de buffers circulares requiere alta pericia.
+              </span>
+            </td>
+            <td>
+              <span class="status-pill status-fail">Alta</span><br>
+              <span class="node-desc">
+                Enfocado a ingenieros de redes celulares. Exige dominar especificaciones 3GPP, configuración
+                de kernels Linux en tiempo real (SCHED_FIFO), direccionamiento IP y temporización nanosegundo.
+              </span>
+            </td>
+            <td>
+              <span class="status-pill status-pass">Baja a Media</span><br>
+              <span class="node-desc">
+                Entorno sumamente guiado con documentación exhaustiva, scripts vectorizados prediseñados
+                y visores inmediatos (analizadores de espectro, diagramas de ojo y constelaciones).
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td class="fw-600">Flexibilidad Operativa</td>
+            <td>
+              <span class="status-pill status-pass">Extrema / Universal</span><br>
+              <span class="node-desc">
+                Permite implementar cualquier sistema arbitrario: enlaces satelitales, Bluetooth, ZigBee,
+                radioastronomía, radares pulse-Doppler y protocolos propietarios mediante grafos de flujo.
+              </span>
+            </td>
+            <td>
+              <span class="status-pill status-warn">Especializada Celular</span><br>
+              <span class="node-desc">
+                Ultra-optimizada exclusivamente para levantar estaciones base (eNodeB/gNodeB) y núcleos (EPC/5GC)
+                completos que interactúan con smartphones comerciales reales.
+              </span>
+            </td>
+            <td>
+              <span class="status-pill status-pass">Alta en Simulación</span><br>
+              <span class="node-desc">
+                Excelente para modelado algorítmico enlace a enlace (link-level), caracterización de canales
+                con multitrayecto y simulación de precodificación MIMO masivo.
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td class="fw-600">Soporte de Hardware</td>
+            <td>
+              <span class="status-pill status-pass">Extenso y Abierto</span><br>
+              <span class="node-desc">
+                Soporte casi universal a través de UHD, SoapySDR y OsmoSDR (RTL-SDR, HackRF, LimeSDR, PlutoSDR,
+                bladeRF y transceptores USRP).
+              </span>
+            </td>
+            <td>
+              <span class="status-pill status-warn">Enfocado a Rendimiento</span><br>
+              <span class="node-desc">
+                Exige transceptores Full-Dúplex con drivers de baja latencia. Soporta de forma óptima
+                Ettus USRP (B210, X310, N300), LimeSDR y tarjetas RFSoC Xilinx.
+              </span>
+            </td>
+            <td>
+              <span class="status-pill status-pass">Amplio mediante Packages</span><br>
+              <span class="node-desc">
+                Communications Toolbox Support Packages para USRP, ADALM-PLUTO y radios comerciales,
+                enfocado en transmisión/recepción de ráfagas para validación de laboratorio.
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Guía de Decisión -->
+    <div class="layer-card active-sdr">
+      <div class="flex-row space-between mb-sm">
+        <strong style="font-size: 1rem;">Criterio de Selección para Proyectos de Telecomunicaciones</strong>
+        <span class="label text-mono">Recomendación Técnica</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-md); font-size: 0.88rem;">
+        <div>
+          <strong style="color: #0043ce;">Usa GNU Radio si:</strong>
+          <p class="node-desc" style="margin-top: 4px;">
+            Tu proyecto investiga formas de onda no celulares (radares, telemetría CubeSat, IoT LoRa) o
+            diseñas bloques de procesamiento digital de señal a nivel de capa física general.
+          </p>
+        </div>
+        <div>
+          <strong style="color: #0e6027;">Usa srsRAN si:</strong>
+          <p class="node-desc" style="margin-top: 4px;">
+            Deseas desplegar una celda privada 4G LTE o 5G-NR funcional con tarjetas SIM reales, conectando terminales
+            comerciales (UE) a un núcleo de red sobre hardware USRP en bandas autorizadas.
+          </p>
+        </div>
+        <div>
+          <strong style="color: #6929c4;">Usa MATLAB 5G Toolbox si:</strong>
+          <p class="node-desc" style="margin-top: 4px;">
+            Realizas validación algorítmica de canal, diseño de precodificación matricial o cursos formativos
+            como la certificación Wireless Communications Onramp antes de pasar a silicio real.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+  </main>
+
+  <!-- ==================== CRÉDITOS Y PIE DE PÁGINA TÉCNICO ==================== -->
+  <footer>
+  <div id="credits-banner" class="layer mt-lg" style="border-left: 4px solid var(--primary); background: linear-gradient(90deg, #f0f4f8 0%, #ffffff 100%); padding: var(--space-md) var(--space-lg); box-shadow: var(--shadow-1);">
+    <div class="flex-row space-between" style="flex-wrap: wrap; gap: var(--space-md);">
+      <div>
+        <div class="label" style="color: var(--primary); font-weight: 600; letter-spacing: 0.12em;">AUTORÍA & DESARROLLO DE SOFTWARE SIMULADOR</div>
+        <div style="font-size: 1.2rem; font-weight: 700; color: #003366; margin-top: 3px;">
+          Reibeiro Velasquez Flórez <span style="font-weight: 400; font-size: 0.88rem; color: var(--on-surface-variant);">— Autor del simulador</span> 
+        </div>
+        <strong>Contacto:</strong> +57 314 537 7834
+        <div style="font-size: 0.86rem; color: var(--on-surface); margin-top: 4px;">
+          <strong>Programa:</strong> Ingeniería de Telecomunicaciones • <strong>Curso:</strong> Sistemas de Comunicación (Código: 202087710) • <strong>Grupo:</strong> 33
+        </div>
+        <div style="font-size: 0.82rem; color: var(--on-surface-variant); margin-top: 2px;">
+          Escuela de Ciencias Básicas, Tecnología e Ingeniería (ECBTI) • Universidad Nacional Abierta y a Distancia (UNAD)
+        </div>
+      </div>
+      <div style="border-left: 2px solid var(--outline-variant); padding-left: var(--space-md);">
+        <div class="label">TUTOR DEL CURSO</div>
+        <div style="font-size: 1rem; font-weight: 600; color: var(--on-surface); margin-top: 3px;">Jimmy Orlando Salcedo Méndez</div>
+        <div style="font-size: 0.82rem; color: var(--on-surface-variant); margin-top: 2px;">
+          Tarea 5: Análisis de SDR y certificación en telecomunicaciones Onramp
+        </div>
+        <div style="font-size: 0.8rem; font-weight: 500; color: var(--primary); margin-top: 2px;">
+          CEAD Neiva, Huila • Noviembre de 2026
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="border-top: var(--rule); padding-top: var(--space-md); margin-top: var(--space-md); display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); font-size: 0.8rem; color: var(--on-surface-variant);">
+    <div>
+      <strong>Simulador y Explorador de Arquitecturas HDR vs. SDR</strong> • UNAD ECBTI 2026
+    </div>
+    <div class="text-mono">
+      Fundamentado en estándares 3GPP Rel-15/16/17, O-RAN Alliance, J. Mitola III (1995) y especificaciones Ettus Research
+    </div>
+  </div>
+  </footer>
+
+</div>
+
+
+
+<script>
+  /* ========================================================================
+     ESTADO GLOBAL DE LA APLICACIÓN Y BASE DE CONOCIMIENTO
+     ======================================================================== */
+  let currentActiveTab = 'arch';
+  let isSimRunning = true;
+  let animFrameId = null;
+
+  // Estado del Laboratorio de Señales
+  const simState = {
+    signalType: '5g_qam64',
+    probePoint: 'post_adc',
+    snr: 24,
+    adcBits: 12,
+    ppmOffset: 0.1,
+    filterType: 'rrc_035',
+    timePhase: 0,
+    primaryTransmitting: false,
+    sensingSNR: -6,
+    waterfallHistory: []
+  };
+
+  // Base de datos de bloques arquitectónicos para el Inspector
+  const blockData = {
+    hdr_ant: {
+      name: 'Antena RF Dedicada (Banda Estrecha)',
+      domain: 'DOMINIO ANALÓGICO RF (HDR)',
+      badge: 'HDR Tradicional',
+      badgeClass: 'badge-hdr',
+      sub: 'Captación pasiva resonante sintonizada a frecuencia fija',
+      math: 'Conversión de campo incidente $E(t)$ en tensión guiada $V(t)$. Parámetro $S_{11} < -10\\,\\text{dB}$ solo en la banda de diseño.',
+      params: [
+        { label: 'Rango Frecuencia', val: 'Canal Único (ej. 100 MHz FM o 900 MHz)' },
+        { label: 'Ancho de Banda', val: 'Estrecho (< 5% de $f_0$)' },
+        { label: 'Reconfiguración', val: '0% (Exige cambio físico de antena)' }
+      ],
+      calloutTitle: 'Contraste con SDR',
+      callout: 'En SDR, el frontal emplea antenas de banda ancha (70 MHz a 6 GHz) con acopladores activos, digitalizando espectros completos sin intervención de mástil.'
+    },
+    hdr_lna: {
+      name: 'LNA (Amplificador de Bajo Ruido Analógico)',
+      domain: 'DOMINIO ANALÓGICO RF (HDR)',
+      badge: 'HDR Tradicional',
+      badgeClass: 'badge-hdr',
+      sub: 'Etapa de ganancia fija con minimización de figura de ruido',
+      math: 'Fórmula de Friis: $F_{total} = F_1 + \\frac{F_2 - 1}{G_1} + \\dots$ La primera etapa determina el piso de ruido térmico.',
+      params: [
+        { label: 'Figura de Ruido (NF)', val: '1.2 – 2.5 dB fija' },
+        { label: 'Punto de Intersección (IIP3)', val: '+15 dBm analógico rígido' },
+        { label: 'Consumo', val: 'Bajo y continuo (mW)' }
+      ],
+      calloutTitle: 'Contraste con SDR',
+      callout: 'El LNA en SDR está integrado en pastillas RFIC avanzadas (como AD9361) con control automático de ganancia (AGC) programable por bus serie en tiempo real.'
+    },
+    hdr_bpf: {
+      name: 'Filtro de RF Fijo (Preselección Cableada)',
+      domain: 'DOMINIO ANALÓGICO RF (HDR)',
+      badge: 'HDR Tradicional',
+      badgeClass: 'badge-hdr',
+      sub: 'Filtro pasabanda de cavidad resonante o acústico de onda (SAW)',
+      math: 'Rechazo de frecuencia imagen: $|f_{im} - f_{RF}| = 2 f_{IF}$. Las frecuencias fuera de banda se atenúan rígidamente en analógico.',
+      params: [
+        { label: 'Factor de Calidad Q', val: 'Fijo (inmutable)' },
+        { label: 'Atenuación fuera de banda', val: '> 40 dB en banda fija' },
+        { label: 'Adaptabilidad', val: 'Cero (requiere cambiar hardware)' }
+      ],
+      calloutTitle: 'Contraste con SDR',
+      callout: 'En SDR se emplean bancos de filtros sintonizables por varactores o conmutación digital en RF, o bien conversión directa Zero-IF donde la imagen se cancela digitalmente.'
+    },
+    hdr_mix: {
+      name: 'Mezclador Analógico + Oscilador Local Fijo',
+      domain: 'DOMINIO ANALÓGICO RF (HDR)',
+      badge: 'HDR Tradicional',
+      badgeClass: 'badge-hdr',
+      sub: 'Conversión heterodina hacia Frecuencia Intermedia (IF)',
+      math: '$V_{IF}(t) = V_{RF}(t) \\cdot \\cos(2\\pi f_{LO} t) = \\frac{1}{2} [\\cos(2\\pi(f_{RF}-f_{LO})t) + \\cos(2\\pi(f_{RF}+f_{LO})t)]$',
+      params: [
+        { label: 'Frecuencia LO', val: 'Cristal de cuarzo o PLL fijo' },
+        { label: 'Deriva Térmica', val: 'Susceptible a temperatura' },
+        { label: 'Aislamiento LO-RF', val: '25 – 35 dB' }
+      ],
+      calloutTitle: 'Contraste con SDR',
+      callout: 'En SDR se utilizan Sintetizadores Digitales Directos (DDS) y osciladores controlados numéricamente (NCO) con resolución de sub-Hertz y pasos instantáneos.'
+    },
+    hdr_if: {
+      name: 'Filtro IF Analógico de Frecuencia Intermedia',
+      domain: 'DOMINIO ANALÓGICO IF (HDR)',
+      badge: 'HDR Tradicional',
+      badgeClass: 'badge-hdr',
+      sub: 'Definición analógica rígida del ancho de banda del canal',
+      math: 'Filtro cerámico o LC centrado en $f_{IF} = 10.7\\,\\text{MHz}$ o $455\\,\\text{kHz}$. Selectividad de canal totalmente pasiva.',
+      params: [
+        { label: 'Ancho de Banda', val: 'Invariable (ej. 200 kHz FM o 9 kHz AM)' },
+        { label: 'Distorsión de Fase', val: 'No lineal en los bordes de banda' },
+        { label: 'Retardo de Grupo', val: 'Provoca dispersión temporal' }
+      ],
+      calloutTitle: 'Contraste con SDR',
+      callout: 'En SDR el filtrado se traslada a la FPGA mediante filtros FIR de fase estrictamente lineal, garantizando retardo de grupo nulo e inmunidad a la distorsión de fase.'
+    },
+    hdr_asic: {
+      name: 'Demodulador ASIC Fijo (Circuito Integrado Dedicado)',
+      domain: 'SILICIO DEDICADO INMUTABLE (HDR)',
+      badge: 'HDR Tradicional',
+      badgeClass: 'badge-hdr',
+      sub: 'Detector de envolvente, discriminador FM o demodulador cableado',
+      math: 'Demodulación cableada en transistores fijos. Para cambiar de FM a QAM o LTE se debe fabricar un nuevo chip ASIC.',
+      params: [
+        { label: 'Flexibilidad de Estándar', val: '0% (Cero reconfiguración)' },
+        { label: 'Costo NRE', val: 'Millones de dólares por rediseño' },
+        { label: 'Eficiencia por Vatio', val: 'Máxima, pero nula adaptabilidad' }
+      ],
+      calloutTitle: 'Contraste con SDR',
+      callout: 'En SDR el demodulador es código C++/Python o HDL en FPGA. Cambiar de FM analógica a 5G-NR es simplemente cargar un nuevo script o archivo bitstream.'
+    },
+    hdr_out: {
+      name: 'Salida de Datos / Banda Base Analógica',
+      domain: 'SALIDA FINAL (HDR)',
+      badge: 'HDR Tradicional',
+      badgeClass: 'badge-hdr',
+      sub: 'Entrega final de señal al usuario o dispositivo específico',
+      math: 'Salida de audio en altavoz o tren de pulsos binarios sin posibilidad de re-enrutamiento por paquetes IP.',
+      params: [
+        { label: 'Protocolo de Red', val: 'Punto a punto rígido' },
+        { label: 'Virtualización', val: 'Inexistente' }
+      ],
+      calloutTitle: 'Contraste con SDR',
+      callout: 'En SDR los datos se empaquetan en tramas Ethernet / IP, transportables a centros de borde (Edge Cloud) para orquestación dinámica en redes vRAN.'
+    },
+
+    // BLOQUES SDR
+    sdr_ant: {
+      name: 'Antena de Banda Ancha Ágil (SDR)',
+      domain: 'FRENTE RECONFIGURABLE RF (SDR)',
+      badge: 'SDR Moderno',
+      badgeClass: 'badge-sdr',
+      sub: 'Captación electromagnética continua en rangos desde 70 MHz hasta 6 GHz',
+      math: 'Respuesta plana optimizada con transformadores de balun y redes de adaptación dinámicas para estándares múltiples.',
+      params: [
+        { label: 'Cobertura', val: '70 MHz – 6.0 GHz continuo' },
+        { label: 'Soporte Estándar', val: 'VHF, UHF, ISM, Celular 4G/5G, Satélite' },
+        { label: 'Conexión', val: 'Puertos SMA duales TX/RX y RX2' }
+      ],
+      calloutTitle: 'Ventaja Radical',
+      callout: 'Permite que un único terminal o torre celular opere simultáneamente en diferentes portadoras sin alterar los elementos radiantes.'
+    },
+    sdr_fe: {
+      name: 'Front-End RF con LNA/PA Conmutable (AD9361)',
+      domain: 'TRANSCEPTOR INTEGRADO RF (SDR)',
+      badge: 'SDR Moderno',
+      badgeClass: 'badge-sdr',
+      sub: 'Etapa de ganancia programable y amplificación de potencia conmutada',
+      math: 'Ganancia digital $G_{dB} \\in [0, 75]\\,\\text{dB}$ en pasos de $0.5\\,\\text{dB}$ por SPI. Soporta duplexación TDD ultrarrápida y FDD continuo.',
+      params: [
+        { label: 'Figura de Ruido', val: '< 2.5 dB controlada por firmware' },
+        { label: 'Ganancia RF', val: 'Hasta 76 dB analógica/digital' },
+        { label: 'Canales', val: '2x2 MIMO simultáneo e independiente' }
+      ],
+      calloutTitle: 'Ventaja Radical',
+      callout: 'Conmuta entre transmisión y recepción en microsegundos, esencial para el sincronismo de ranura (slot) de sub-milisegundo en 5G TDD.'
+    },
+    sdr_tunable: {
+      name: 'Filtro RF Sintonizable por Software',
+      domain: 'PRESELECCIÓN DINÁMICA (SDR)',
+      badge: 'SDR Moderno',
+      badgeClass: 'badge-sdr',
+      sub: 'Preselección ágil para evitar saturación de mezcladores por armónicos',
+      math: 'Frecuencia de corte variable $f_c$ seleccionable por software para aislar el canal deseado antes de la digitalización.',
+      params: [
+        { label: 'Rango de Sintonía', val: 'Continuo en toda la banda operativa' },
+        { label: 'Control', val: 'Firmware de microsegundos' },
+        { label: 'Supresión de Espuelas', val: '> 50 dB dinámicos' }
+      ],
+      calloutTitle: 'Ventaja Radical',
+      callout: 'Protege al convertidor analógico-digital de bloqueadores fuera de banda sin necesidad de tarjetas de filtro intercambiables.'
+    },
+    sdr_iq: {
+      name: 'Transceptor RF en Cuadratura I/Q (Zero-IF)',
+      domain: 'CONVERSIÓN DIRECTA ZERO-IF (SDR)',
+      badge: 'SDR Moderno',
+      badgeClass: 'badge-sdr',
+      sub: 'Descomposición instantánea en componentes En-Fase (I) y Cuadratura (Q)',
+      math: '$I(t) = s(t) \\cos(2\\pi f_c t)$, $\\quad Q(t) = -s(t) \\sin(2\\pi f_c t)$. La señal compleja en banda base es $r(t) = I(t) + j Q(t)$.',
+      params: [
+        { label: 'Arquitectura', val: 'Zero-IF (Conversión directa sin IF fija)' },
+        { label: 'Balance de Fase I/Q', val: '< 0.5° compensado por DSP' },
+        { label: 'Rechazo de Imagen', val: '> 60 dB tras calibración digital' }
+      ],
+      calloutTitle: 'Ventaja Radical',
+      callout: 'Elimina totalmente los costosos y voluminosos filtros cerámicos de frecuencia intermedia, desplazando el filtrado al dominio digital.'
+    },
+    sdr_adc: {
+      name: 'Convertidores ADC / DAC de Alta Velocidad',
+      domain: 'LÍMITE ANALÓGICO / DIGITAL (SDR)',
+      badge: 'SDR Moderno',
+      badgeClass: 'badge-sdr',
+      sub: 'Digitalización en cuadratura directa junto a la antena',
+      math: '$SNR_{cuant} \\approx 6.02 N + 1.76\\,\\text{dB}$. Para $N = 12\\,\\text{bits}$, $SNR_{max} \\approx 74\\,\\text{dB}$, apto para constelaciones 256-QAM.',
+      params: [
+        { label: 'Resolución', val: '12 bits (B210) a 14/16 bits (N210)' },
+        { label: 'Tasa de Muestreo', val: 'Hasta 61.44 MS/s continua' },
+        { label: 'Rango Dinámico', val: '> 70 dB sin distorsión de compresión' }
+      ],
+      calloutTitle: 'Punto Crítico 5G',
+      callout: 'Los 8 bits de un RTL-SDR dan solo ~50 dB de rango dinámico, insuficiente para el elevado PAPR de las ondas OFDM de 5G-NR.'
+    },
+    sdr_fpga: {
+      name: 'FPGA Core (DDC / DUC, Diezmado & FFT)',
+      domain: 'PROCESAMIENTO TIEMPO REAL PARALELO (SDR)',
+      badge: 'SDR Moderno',
+      badgeClass: 'badge-sdr',
+      sub: 'Lógica programable reconfigurable masivamente paralela',
+      math: 'Conversor Descendente Digital (DDC): Mezcla NCO + Filtro Diezmador CIC + Filtrado FIR de canal a tasas de giga-operaciones por segundo.',
+      params: [
+        { label: 'Dispositivo Típico', val: 'Xilinx Spartan-6, Kintex-7 o Zynq RFSoC' },
+        { label: 'Paralelismo', val: 'Transformadas IFFT/FFT de 4096 puntos en tiempo real' },
+        { label: 'Latencia', val: 'Sub-microsegundo determinista' }
+      ],
+      calloutTitle: 'Ventaja Radical',
+      callout: 'Maneja el volumen bruto de muestras digitales liberando al procesador host de tareas repetitivas de alta velocidad de muestreo.'
+    },
+    sdr_bus: {
+      name: 'Bus de Interconexión de Alta Tasa (PCIe / USB 3.0 / 10GbE)',
+      domain: 'TRANSPORTE DIGITAL (SDR)',
+      badge: 'SDR Moderno',
+      badgeClass: 'badge-sdr',
+      sub: 'Streaming continuo de muestras I/Q digitales con buffers DMA',
+      math: 'Ancho de banda de bus: $Tasa = 2 \\times \\text{Muestras/s} \\times \\text{Bytes/muestra}$. A 56 MHz: $\\sim 224\\,\\text{MB/s}$.',
+      params: [
+        { label: 'Interfaz B210', val: 'USB 3.0 SuperSpeed (5 Gbps)' },
+        { label: 'Interfaz X310 / N300', val: 'Doble 10 Gigabit Ethernet (SFP+)' },
+        { label: 'Protocolo de Streaming', val: 'VITA 49 Radio Transport / UHD' }
+      ],
+      calloutTitle: 'Ventaja Radical',
+      callout: 'Permite desacoplar físicamente el frontal de radio de la unidad de procesamiento centralizada en centros de cómputo en la nube.'
+    },
+    sdr_cpu: {
+      name: 'DSP / Host CPU (vRAN, FEC & Pila 3GPP)',
+      domain: 'CAPA DE APLICACIÓN RECONFIGURABLE (SDR)',
+      badge: 'SDR Moderno',
+      badgeClass: 'badge-sdr',
+      sub: 'Computación de propósito general en servidores COTS con AVX-512',
+      math: 'Decodificación FEC (LDPC / Polar 5G), filtrado adaptativo de canal RRC, programación MAC y protocolos O-RAN vRAN.',
+      params: [
+        { label: 'Entorno', val: 'Servidores estándar Linux x86 o ARM' },
+        { label: 'Software Compatible', val: 'srsRAN 5G, OpenAirInterface, GNU Radio' },
+        { label: 'Actualización', val: 'En caliente mediante contenedores (CNF/VNF)' }
+      ],
+      calloutTitle: 'Ventaja Radical',
+      callout: 'Cero Vendor Lock-in: una actualización de 4G a 5G o futuras 6G es una simple actualización de software sin cambiar la infraestructura física.'
+    }
+  };
+
+  /* ========================================================================
+     INICIALIZACIÓN AL CARGAR LA PÁGINA
+     ======================================================================== */
+  window.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+    // Renderizado KaTeX inicial
+    renderMathJax();
+    // Inspección inicial de bloque
+    inspectBlock('hdr_ant');
+    // Inicializar Canvases de Simulación
+    initCanvases();
+    // Iniciar bucle de animación
+    startSimulationLoop();
+    // Ejecutar evaluación inicial de 5G
+    run5GEvaluation();
+    // Sincronizar métricas del laboratorio con el motor de cálculo
+    updateQualityMetrics();
+    // Sincronizar rótulos de la constelación con la señal inicial
+    updateSignalLabels();
+    // Sincronizar el estado del sensado con el slider inicial
+    updateSensingSNR(document.getElementById('slider-sensing-snr').value);
+
+    // Navegación por teclado entre pestañas (WAI-ARIA APG)
+    const tablist = document.querySelector('.nav-tabs');
+    if (tablist) {
+      tablist.addEventListener('keydown', (e) => {
+        const keys = ['ArrowRight', 'ArrowLeft', 'Home', 'End'];
+        if (!keys.includes(e.key)) return;
+        const btns = Array.from(tablist.querySelectorAll('[role="tab"]'));
+        const idx = btns.indexOf(document.activeElement);
+        if (idx === -1) return;
+        e.preventDefault();
+        let next = idx;
+        if (e.key === 'ArrowRight') next = (idx + 1) % btns.length;
+        if (e.key === 'ArrowLeft')  next = (idx - 1 + btns.length) % btns.length;
+        if (e.key === 'Home') next = 0;
+        if (e.key === 'End')  next = btns.length - 1;
+        btns[next].focus();
+        btns[next].click();
+      });
+    }
+
+    // Accesibilidad de los nodos del pipeline: enfocables y activables por teclado
+    document.querySelectorAll('.flow-node').forEach(node => {
+      node.setAttribute('role', 'button');
+      node.setAttribute('tabindex', '0');
+      if (!node.hasAttribute('aria-label')) {
+        const t = node.querySelector('.node-title span');
+        node.setAttribute('aria-label', `Inspeccionar bloque: ${t ? t.textContent.trim() : node.id}`);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      const node = e.target.closest ? e.target.closest('.flow-node') : null;
+      if (!node) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        node.click();
+      }
+    });
+
+    // En móvil, acercar el inspector tras seleccionar un bloque (P1-9)
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest || !e.target.closest('.flow-node')) return;
+      if (!window.matchMedia('(max-width: 980px)').matches) return;
+      const panel = document.getElementById('inspector-aside');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  function renderMathJax() {
+    if (window.renderMathInElement) {
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ]
+      });
+    }
+  }
+
+  /* ========================================================================
+     CAMBIO DE PESTAÑAS PRINCIPALES
+     ======================================================================== */
+  function switchMainTab(tabKey) {
+    currentActiveTab = tabKey;
+    const tabs = ['arch', 'lab', 'hw', 'oran', 'soft'];
+
+    tabs.forEach(t => {
+      const btn = document.getElementById(`tab-btn-${t}`);
+      const panel = document.getElementById(`tab-panel-${t}`);
+      if (btn && panel) {
+        const selected = (t === tabKey);
+        btn.classList.toggle('is-active', selected);
+        btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+        btn.tabIndex = selected ? 0 : -1;
+        panel.style.display = selected ? 'block' : 'none';
+      }
+    });
+
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+    renderMathJax();
+
+    // Reajustar dimensiones de canvas al activar el laboratorio o sensado
+    if (tabKey === 'lab' || tabKey === 'oran') {
+      resizeCanvases();
+      requestAnimationFrame(() => { resizeCanvases(); startSimulationLoop(); });
+    }
+  }
+
+  /* ========================================================================
+     INSPECTOR ARQUITECTÓNICO DE BLOQUES (TAB 1)
+     ======================================================================== */
+  function inspectBlock(blockKey) {
+    const data = blockData[blockKey];
+    if (!data) return;
+
+    // Desmarcar todos los nodos
+    document.querySelectorAll('.flow-node').forEach(node => {
+      node.classList.remove('active-node', 'active-node-hdr', 'active-node-sdr');
+      node.removeAttribute('aria-current');
+    });
+
+    // Activar el nodo actual
+    const targetNode = document.getElementById(`node-${blockKey.replace('_', '-')}`);
+    if (targetNode) {
+      if (blockKey.startsWith('hdr')) {
+        targetNode.classList.add('active-node-hdr');
+      } else {
+        targetNode.classList.add('active-node-sdr');
+      }
+      targetNode.setAttribute('aria-current', 'true');
+    }
+
+    // Actualizar Panel Lateral
+    const domDomain = document.getElementById('insp-domain');
+    const domBadge = document.getElementById('insp-badge');
+    const domTitle = document.getElementById('insp-title');
+    const domSub = document.getElementById('insp-sub');
+    const domMath = document.getElementById('insp-math');
+    const domParams = document.getElementById('insp-params');
+    const domCallTitle = document.getElementById('insp-callout-title');
+    const domCallBody = document.getElementById('insp-callout-body');
+
+    if (domDomain) domDomain.textContent = data.domain;
+    if (domBadge) {
+      domBadge.textContent = data.badge;
+      domBadge.className = `badge ${data.badgeClass}`;
+    }
+    if (domTitle) domTitle.textContent = data.name;
+    if (domSub) domSub.textContent = data.sub;
+    if (domMath) domMath.innerHTML = data.math;
+
+    if (domParams) {
+      domParams.innerHTML = '';
+      data.params.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'flex-row space-between';
+        row.innerHTML = `<span class="text-muted">${p.label}:</span><span class="text-mono fw-600">${p.val}</span>`;
+        domParams.appendChild(row);
+      });
+    }
+
+    if (domCallTitle) domCallTitle.textContent = data.calloutTitle;
+    if (domCallBody) domCallBody.textContent = data.callout;
+
+    renderMathJax();
+  }
+
+  function highlightComparison(type) {
+    if (type === 'rf') {
+      inspectBlock('sdr_fe');
+    } else if (type === 'mix') {
+      inspectBlock('sdr_iq');
+    } else if (type === 'filter') {
+      inspectBlock('sdr_tunable');
+    } else if (type === 'demod') {
+      inspectBlock('sdr_cpu');
+    }
+  }
+
+  function sendToSignalLabFromInspector() {
+    switchMainTab('lab');
+  }
+
+  /* ========================================================================
+     LABORATORIO DE SEÑALES EN TIEMPO REAL (CANVAS ENGINE)
+     ======================================================================== */
+  let cvOsc, cvSpec, cvConst, cvEye, cvWater;
+  let ctxOsc, ctxSpec, ctxConst, ctxEye, ctxWater;
+  let canvasDPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  function initCanvases() {
+    cvOsc = document.getElementById('canvas-oscilloscope');
+    cvSpec = document.getElementById('canvas-spectrum');
+    cvConst = document.getElementById('canvas-constellation');
+    cvEye = document.getElementById('canvas-eye');
+    cvWater = document.getElementById('canvas-waterfall');
+
+    if (cvOsc) ctxOsc = cvOsc.getContext('2d');
+    if (cvSpec) ctxSpec = cvSpec.getContext('2d');
+    if (cvConst) ctxConst = cvConst.getContext('2d');
+    if (cvEye) ctxEye = cvEye.getContext('2d');
+    if (cvWater) ctxWater = cvWater.getContext('2d');
+
+    resizeCanvases();
+    window.addEventListener('resize', debouncedResize);
+  }
+
+  // Debounce del resize con rAF (P2-4)
+  let resizeRafId = null;
+  function debouncedResize() {
+    if (resizeRafId) return;
+    resizeRafId = requestAnimationFrame(() => {
+      resizeRafId = null;
+      resizeCanvases();
+    });
+  }
+
+  function resizeCanvases() {
+    const list = [
+      { c: cvOsc, ctx: ctxOsc },
+      { c: cvSpec, ctx: ctxSpec },
+      { c: cvConst, ctx: ctxConst },
+      { c: cvEye, ctx: ctxEye },
+      { c: cvWater, ctx: ctxWater }
+    ];
+
+    list.forEach(item => {
+      if (item.c) {
+        const rect = item.c.parentElement.getBoundingClientRect();
+        canvasDPR = Math.min(window.devicePixelRatio || 1, 2);
+        item.c.width = Math.round(rect.width * canvasDPR);
+        item.c.height = Math.round(rect.height * canvasDPR);
+      }
+    });
+  }
+
+  function toggleSimulation() {
+    isSimRunning = !isSimRunning;
+    const btnText = document.getElementById('sim-text');
+    const btnIcon = document.getElementById('sim-icon');
+    const badge = document.getElementById('global-sim-state');
+
+    if (btnText && btnIcon) {
+      if (isSimRunning) {
+        btnText.textContent = 'Pausar Señal';
+        btnIcon.setAttribute('data-lucide', 'pause');
+        if (badge) badge.innerHTML = '<i data-lucide="activity" style="width: 14px; height: 14px;"></i> Pipeline: Activo';
+      } else {
+        btnText.textContent = 'Reanudar Señal';
+        btnIcon.setAttribute('data-lucide', 'play');
+        if (badge) badge.innerHTML = '<i data-lucide="pause-circle" style="width: 14px; height: 14px;"></i> Pipeline: En Pausa';
+      }
+      if (window.lucide) window.lucide.createIcons();
+    }
+    startSimulationLoop();
+  }
+
+  function resetSimParams() {
+    simState.snr = 24;
+    simState.adcBits = 12;
+    simState.ppmOffset = 0.1;
+    simState.signalType = '5g_qam64';
+    simState.probePoint = 'post_adc';
+    simState.filterType = 'rrc_035';
+
+    document.getElementById('slider-snr').value = 24;
+    document.getElementById('disp-snr').textContent = '24 dB';
+    document.getElementById('slider-bits').value = 12;
+    document.getElementById('disp-bits').textContent = '12 bits (USRP)';
+    document.getElementById('slider-ppm').value = 0.1;
+    document.getElementById('disp-ppm').textContent = '0.1 ppm';
+    document.getElementById('sel-signal-type').value = '5g_qam64';
+    document.getElementById('sel-probe-point').value = 'post_adc';
+    document.getElementById('sel-filter-type').value = 'rrc_035';
+
+    updateADCDisplay();
+    updateSignalLabels();
+    updateQualityMetrics();
+  }
+
+  function syncSNR(val) {
+    simState.snr = parseFloat(val);
+    const disp = document.getElementById('disp-snr');
+    if (disp) disp.textContent = `${simState.snr} dB`;
+    updateQualityMetrics();
+  }
+
+  function syncBits(val) {
+    simState.adcBits = parseInt(val, 10);
+    const disp = document.getElementById('disp-bits');
+    if (disp) {
+      let label = `${simState.adcBits} bits`;
+      if (simState.adcBits <= 8) label += ' (RTL-SDR / HackRF)';
+      else if (simState.adcBits === 12) label += ' (USRP B210)';
+      else if (simState.adcBits >= 14) label += ' (USRP N210 / Pro)';
+      disp.textContent = label;
+    }
+    updateADCDisplay();
+    updateQualityMetrics();
+  }
+
+  function updateADCDisplay() {
+    const dyn = (6.02 * simState.adcBits + 1.76).toFixed(1);
+    const disp = document.getElementById('disp-dyn-range');
+    if (disp) disp.textContent = `${dyn} dB`;
+  }
+
+  function syncPPM(val) {
+    simState.ppmOffset = parseFloat(val);
+    const disp = document.getElementById('disp-ppm');
+    if (disp) disp.textContent = `${simState.ppmOffset} ppm`;
+    updateQualityMetrics();
+  }
+
+  /* Metadatos de la constelación: rótulos coherentes con la señal elegida.
+     Los PAPR son valores típicos ilustrativos, no una medición del canvas. */
+  const SIGNAL_META = {
+    analog_fm:     { name: 'FM Analógica', points: 0,   papr: '≈3.0 dB', analog: true },
+    cellular_qpsk: { name: 'QPSK',         points: 4,   papr: '≈3.5 dB' },
+    qam16:         { name: '16-QAM',       points: 16,  papr: '≈6.0 dB' },
+    '5g_qam64':    { name: '64-QAM',       points: 64,  papr: '≈8.4 dB' },
+    '5g_qam256':   { name: '256-QAM',      points: 256, papr: '≈8.6 dB' },
+    interf_awgn:   { name: 'AWGN',         points: 0,   papr: '—',       analog: true }
+  };
+
+  function updateSignalLabels() {
+    const meta = SIGNAL_META[simState.signalType] || SIGNAL_META['5g_qam64'];
+    const name = document.getElementById('const-mod-name');
+    const pts = document.getElementById('const-points-count');
+    const papr = document.getElementById('live-papr');
+    if (name) name.textContent = meta.name;
+    if (pts) pts.textContent = meta.points ? `Símbolos: ${meta.points}` : 'Sin constelación discreta';
+    if (papr) papr.textContent = meta.papr;
+
+    // Descripción accesible del canvas según la señal activa (P2-10)
+    const cv = document.getElementById('canvas-constellation');
+    if (cv) {
+      cv.setAttribute('aria-label', meta.points
+        ? `Diagrama de constelación I/Q de ${meta.name} con ${meta.points} símbolos`
+        : `Diagrama I/Q: ${meta.name} sin constelación discreta`);
+    }
+  }
+
+  function onSignalTypeChange() {
+    const sel = document.getElementById('sel-signal-type');
+    if (sel) simState.signalType = sel.value;
+    updateSignalLabels();
+    updateQualityMetrics();
+  }
+
+  function onProbePointChange() {
+    const sel = document.getElementById('sel-probe-point');
+    if (sel) {
+      simState.probePoint = sel.value;
+      const lbl = document.getElementById('scope-probe-label');
+      if (lbl) lbl.textContent = sel.options[sel.selectedIndex].text.split(':')[0];
+    }
+    updateQualityMetrics();
+  }
+
+  function onFilterChange() {
+    const sel = document.getElementById('sel-filter-type');
+    if (sel) simState.filterType = sel.value;
+    updateQualityMetrics();
+  }
+
+  function updateQualityMetrics() {
+    // Cálculo realista de EVM según SNR, bits de cuantización y deriva PPM
+    // Ruido térmico: sigma_awgn = 10^(-SNR/20)
+    const snrLinear = Math.pow(10, -simState.snr / 20);
+    // Ruido de cuantización de ADC: sigma_quant ≈ 1 / (2^bits * sqrt(12))
+    const quantLinear = 1.0 / (Math.pow(2, simState.adcBits) * 3.46);
+    // Error de fase por deriva:
+    const phaseNoise = (simState.ppmOffset / 40.0) * 0.12;
+
+    let totalEVM = (Math.sqrt(snrLinear * snrLinear + quantLinear * quantLinear * 25 + phaseNoise * phaseNoise) * 100);
+    if (simState.filterType === 'none') totalEVM *= 1.4;
+    if (simState.filterType === 'analog_cheb') totalEVM *= 1.15;
+
+    totalEVM = Math.max(0.6, Math.min(45.0, totalEVM));
+
+    const evmDisp = document.getElementById('live-evm');
+    const statusDisp = document.getElementById('live-3gpp-status');
+    const berDisp = document.getElementById('live-ber');
+    const eyeDisp = document.getElementById('eye-opening');
+
+    if (evmDisp) evmDisp.textContent = `${totalEVM.toFixed(2)} %`;
+
+    // Apertura del ojo derivada del ruido AWGN (indicador cualitativo, no medición)
+    if (eyeDisp) {
+      const opening = Math.max(0, Math.min(100, 100 * (1 - snrLinear)));
+      eyeDisp.textContent = `${opening.toFixed(1)} %`;
+    }
+
+    if (statusDisp) {
+      const LIMITS = { cellular_qpsk: 17.5, qam16: 12.5, '5g_qam64': 8.0, '5g_qam256': 3.5 };
+      const limit = LIMITS[simState.signalType];
+      const label = (SIGNAL_META[simState.signalType] || {}).name || 'la señal';
+      if (limit == null) {
+        statusDisp.textContent = 'No aplica para esta señal';
+        statusDisp.className = 'status-pill status-warn';
+      } else if (totalEVM < limit) {
+        statusDisp.textContent = `Cumple ${label} (< ${limit}%)`;
+        statusDisp.className = 'status-pill status-pass';
+      } else {
+        statusDisp.textContent = `No cumple ${label} (EVM ${totalEVM.toFixed(2)}% > ${limit}%)`;
+        statusDisp.className = 'status-pill status-fail';
+      }
+    }
+
+    if (berDisp) {
+      if (simState.snr > 20 && totalEVM < 4.0) berDisp.textContent = '< 10⁻⁶ (Sin Errores)';
+      else if (simState.snr > 10) berDisp.textContent = '~ 10⁻⁴ (Corregible FEC)';
+      else berDisp.textContent = '> 10⁻² (Pérdida de Trama)';
+    }
+  }
+
+  /* ========================================================================
+     MOTOR DE RENDERIZADO GRÁFICO (CANVAS ANIMATION LOOP)
+     ======================================================================== */
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  function drawActiveTab() {
+    if (currentActiveTab === 'lab') {
+      drawOscilloscope();
+      drawSpectrum();
+      drawConstellation();
+      drawEyeDiagram();
+    } else if (currentActiveTab === 'oran') {
+      drawWaterfall();
+    }
+  }
+
+  function startSimulationLoop() {
+    cancelAnimationFrame(animFrameId);
+    animFrameId = null;
+
+    // Sin animación si está en pausa o si el usuario prefiere movimiento reducido:
+    // se dibuja un solo cuadro estático.
+    if (!isSimRunning || reduceMotion.matches) {
+      drawActiveTab();
+      return;
+    }
+
+    function loop() {
+      simState.timePhase += 0.05;
+      drawActiveTab();
+      animFrameId = requestAnimationFrame(loop);
+    }
+    animFrameId = requestAnimationFrame(loop);
+  }
+
+  reduceMotion.addEventListener('change', startSimulationLoop);
+
+  // 1. Osciloscopio Temporal
+  function drawOscilloscope() {
+    if (!cvOsc || !ctxOsc) return;
+    const w = cvOsc.width;
+    const h = cvOsc.height;
+    if (w <= 0 || h <= 0) return;
+    ctxOsc.clearRect(0, 0, w, h);
+
+    // Grid de fondo con protección anti-bucle infinito
+    ctxOsc.strokeStyle = '#1e293b';
+    ctxOsc.lineWidth = 1;
+    const gridDivs = 8;
+    const stepX = Math.max(1, w / gridDivs);
+    const stepY = Math.max(1, h / gridDivs);
+    for (let x = 0; x <= w; x += stepX) {
+      ctxOsc.beginPath();
+      ctxOsc.moveTo(x, 0);
+      ctxOsc.lineTo(x, h);
+      ctxOsc.stroke();
+    }
+    for (let y = 0; y <= h; y += stepY) {
+      ctxOsc.beginPath();
+      ctxOsc.moveTo(0, y);
+      ctxOsc.lineTo(w, y);
+      ctxOsc.stroke();
+    }
+
+    // Eje central
+    ctxOsc.strokeStyle = '#334155';
+    ctxOsc.setLineDash([4, 4]);
+    ctxOsc.beginPath();
+    ctxOsc.moveTo(0, h / 2);
+    ctxOsc.lineTo(w, h / 2);
+    ctxOsc.stroke();
+    ctxOsc.setLineDash([]);
+
+    const noiseAmp = Math.pow(10, -simState.snr / 20) * 0.45;
+    const quantLevels = Math.pow(2, simState.adcBits);
+    const isQuantized = (simState.probePoint === 'post_adc' || simState.probePoint === 'post_filter' || simState.probePoint === 'demod_out');
+
+    // Trazado Canal I (Azul)
+    ctxOsc.strokeStyle = '#38bdf8';
+    ctxOsc.lineWidth = 2 * canvasDPR;
+    ctxOsc.beginPath();
+    for (let px = 0; px < w; px++) {
+      const t = px * 0.02 + simState.timePhase;
+      let valI = 0;
+
+      if (simState.signalType.includes('5g') || simState.signalType === 'qam16') {
+        valI = 0.5 * Math.sin(t * 1.5) + 0.25 * Math.cos(t * 3.7) + 0.15 * Math.sin(t * 7.1);
+      } else if (simState.signalType === 'cellular_qpsk') {
+        const symbolIdx = Math.floor(t * 0.5);
+        valI = (symbolIdx % 2 === 0 ? 0.6 : -0.6);
+      } else if (simState.signalType === 'analog_fm') {
+        valI = 0.7 * Math.sin(t * 0.8 + 1.2 * Math.sin(t * 0.2));
+      } else {
+        valI = (Math.random() - 0.5) * 1.2;
+      }
+
+      // Añadir ruido
+      valI += (Math.random() - 0.5) * noiseAmp;
+
+      // Cuantización ADC si procede
+      if (isQuantized && quantLevels < 1024) {
+        valI = Math.round(valI * quantLevels / 2) / (quantLevels / 2);
+      }
+
+      const py = h / 2 - valI * (h * 0.38);
+      if (px === 0) ctxOsc.moveTo(px, py);
+      else ctxOsc.lineTo(px, py);
+    }
+    ctxOsc.stroke();
+
+    // Trazado Canal Q (Rojo)
+    ctxOsc.strokeStyle = '#fb7185';
+    ctxOsc.lineWidth = 1.5 * canvasDPR;
+    ctxOsc.beginPath();
+    for (let px = 0; px < w; px++) {
+      const t = px * 0.02 + simState.timePhase + Math.PI / 2;
+      let valQ = 0;
+
+      if (simState.signalType.includes('5g') || simState.signalType === 'qam16') {
+        valQ = 0.5 * Math.cos(t * 1.5) - 0.25 * Math.sin(t * 3.7);
+      } else if (simState.signalType === 'cellular_qpsk') {
+        const symbolIdx = Math.floor((t + 1.5) * 0.5);
+        valQ = (symbolIdx % 2 === 0 ? 0.6 : -0.6);
+      } else if (simState.signalType === 'analog_fm') {
+        valQ = 0.7 * Math.cos(t * 0.8 + 1.2 * Math.sin(t * 0.2));
+      } else {
+        valQ = (Math.random() - 0.5) * 1.2;
+      }
+
+      valQ += (Math.random() - 0.5) * noiseAmp;
+
+      if (isQuantized && quantLevels < 1024) {
+        valQ = Math.round(valQ * quantLevels / 2) / (quantLevels / 2);
+      }
+
+      const py = h / 2 - valQ * (h * 0.38);
+      if (px === 0) ctxOsc.moveTo(px, py);
+      else ctxOsc.lineTo(px, py);
+    }
+    ctxOsc.stroke();
+  }
+
+  // 2. Analizador de Espectro (FFT)
+  function drawSpectrum() {
+    if (!cvSpec || !ctxSpec) return;
+    const w = cvSpec.width;
+    const h = cvSpec.height;
+    if (w <= 0 || h <= 0) return;
+    ctxSpec.clearRect(0, 0, w, h);
+
+    // Grid espectro con protección anti-bucle infinito
+    ctxSpec.strokeStyle = '#1e293b';
+    ctxSpec.lineWidth = 1;
+    const stepY = Math.max(1, h / 5);
+    const stepX = Math.max(1, w / 8);
+    for (let y = 0; y <= h; y += stepY) {
+      ctxSpec.beginPath();
+      ctxSpec.moveTo(0, y);
+      ctxSpec.lineTo(w, y);
+      ctxSpec.stroke();
+    }
+    for (let x = 0; x <= w; x += stepX) {
+      ctxSpec.beginPath();
+      ctxSpec.moveTo(x, 0);
+      ctxSpec.lineTo(x, h);
+      ctxSpec.stroke();
+    }
+
+    // Piso de ruido térmico proporcional a SNR y cuantización
+    const noiseFloor = h * 0.85 - (30 - simState.snr) * 1.8;
+    ctxSpec.fillStyle = 'rgba(74, 222, 128, 0.15)';
+    ctxSpec.strokeStyle = '#4ade80';
+    ctxSpec.lineWidth = 1.5 * canvasDPR;
+
+    ctxSpec.beginPath();
+    ctxSpec.moveTo(0, h);
+
+    const center = w / 2;
+    const bwSpan = (simState.signalType.includes('5g') ? w * 0.35 : w * 0.18);
+
+    for (let px = 0; px < w; px++) {
+      const dist = Math.abs(px - center);
+      let pwr = noiseFloor + (Math.random() - 0.5) * 8;
+
+      if (dist < bwSpan) {
+        // Envolvente espectral de modulación
+        const shape = Math.cos((dist / bwSpan) * (Math.PI / 2));
+        const ripple = (simState.signalType.includes('5g')) ? Math.sin(dist * 0.4 + simState.timePhase) * 4 : 0;
+        pwr -= shape * (h * 0.55) + ripple;
+      }
+
+      // Espuelas de distorsión por cuantización si bits <= 8
+      if (simState.adcBits <= 8 && (px % 45 < 3)) {
+        pwr -= (9 - simState.adcBits) * 6;
+      }
+
+      if (px === 0) ctxSpec.lineTo(px, pwr);
+      else ctxSpec.lineTo(px, pwr);
+    }
+    ctxSpec.lineTo(w, h);
+    ctxSpec.closePath();
+    ctxSpec.fill();
+    ctxSpec.stroke();
+
+    // Línea de referencia umbral
+    ctxSpec.strokeStyle = '#f87171';
+    ctxSpec.setLineDash([3, 3]);
+    ctxSpec.beginPath();
+    ctxSpec.moveTo(0, h * 0.3);
+    ctxSpec.lineTo(w, h * 0.3);
+    ctxSpec.stroke();
+    ctxSpec.setLineDash([]);
+  }
+
+  // 3. Diagrama de Constelación I/Q
+  function drawConstellation() {
+    if (!cvConst || !ctxConst) return;
+    const w = cvConst.width;
+    const h = cvConst.height;
+    if (w <= 0 || h <= 0) return;
+    ctxConst.clearRect(0, 0, w, h);
+
+    const size = Math.min(w, h) * 0.82;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    // Ejes ortogonales I y Q
+    ctxConst.strokeStyle = '#334155';
+    ctxConst.lineWidth = 1;
+    ctxConst.beginPath();
+    ctxConst.moveTo(cx - size / 2, cy);
+    ctxConst.lineTo(cx + size / 2, cy);
+    ctxConst.moveTo(cx, cy - size / 2);
+    ctxConst.lineTo(cx, cy + size / 2);
+    ctxConst.stroke();
+
+    // Círculos de referencia concéntricos
+    ctxConst.strokeStyle = '#1e293b';
+    ctxConst.beginPath();
+    ctxConst.arc(cx, cy, size * 0.25, 0, Math.PI * 2);
+    ctxConst.arc(cx, cy, size * 0.45, 0, Math.PI * 2);
+    ctxConst.stroke();
+
+    // Generar constelación según modulación
+    let gridPoints = [];
+    if (simState.signalType === 'cellular_qpsk') {
+      gridPoints = [-0.6, 0.6];
+    } else if (simState.signalType === 'qam16') {
+      gridPoints = [-0.6, -0.2, 0.2, 0.6];
+    } else if (simState.signalType === '5g_qam64') {
+      gridPoints = [-0.7, -0.5, -0.3, -0.1, 0.1, 0.3, 0.5, 0.7];
+    } else if (simState.signalType === '5g_qam256') {
+      gridPoints = [-0.75, -0.65, -0.55, -0.45, -0.35, -0.25, -0.15, -0.05, 0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75];
+    } else {
+      // FM Analógica: nube circular
+      ctxConst.fillStyle = '#38bdf8';
+      for (let i = 0; i < 180; i++) {
+        const ang = (i / 180) * Math.PI * 2 + simState.timePhase;
+        const r = size * 0.35 + (Math.random() - 0.5) * (size * 0.08);
+        ctxConst.fillRect(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r, 2, 2);
+      }
+      return;
+    }
+
+    // Ruido y dispersión
+    const noiseScale = Math.pow(10, -simState.snr / 20) * (size * 0.4);
+    const quantErr = (simState.adcBits <= 8) ? (9 - simState.adcBits) * 2.5 : 0;
+    const phaseRot = (simState.ppmOffset / 40.0) * 0.25;
+
+    ctxConst.fillStyle = '#a855f7';
+    const samplesPerPoint = (simState.signalType === '5g_qam256' ? 1 : 4);
+
+    for (let i = 0; i < gridPoints.length; i++) {
+      for (let j = 0; j < gridPoints.length; j++) {
+        for (let s = 0; s < samplesPerPoint; s++) {
+          let ix = gridPoints[i] + (Math.random() - 0.5) * (noiseScale / size) * 2;
+          let qy = gridPoints[j] + (Math.random() - 0.5) * (noiseScale / size) * 2;
+
+          // Rotación de fase por derivas de oscilador
+          const rotAngle = phaseRot * Math.sin(simState.timePhase * 0.5);
+          const rx = ix * Math.cos(rotAngle) - qy * Math.sin(rotAngle);
+          const ry = ix * Math.sin(rotAngle) + qy * Math.cos(rotAngle);
+
+          const px = cx + rx * (size / 2) + (Math.random() - 0.5) * quantErr;
+          const py = cy + ry * (size / 2) + (Math.random() - 0.5) * quantErr;
+
+          ctxConst.fillRect(px, py, 2.5, 2.5);
+        }
+      }
+    }
+  }
+
+  // 4. Diagrama de Ojo
+  function drawEyeDiagram() {
+    if (!cvEye || !ctxEye) return;
+    const w = cvEye.width;
+    const h = cvEye.height;
+    if (w <= 0 || h <= 0) return;
+    ctxEye.clearRect(0, 0, w, h);
+
+    ctxEye.strokeStyle = '#1e293b';
+    ctxEye.lineWidth = 1;
+    ctxEye.beginPath();
+    ctxEye.moveTo(0, h / 2);
+    ctxEye.lineTo(w, h / 2);
+    ctxEye.moveTo(w / 2, 0);
+    ctxEye.lineTo(w / 2, h);
+    ctxEye.stroke();
+
+    const traces = 28;
+    const noise = Math.pow(10, -simState.snr / 20) * (h * 0.2);
+
+    ctxEye.strokeStyle = 'rgba(250, 204, 21, 0.4)';
+    ctxEye.lineWidth = 1.5;
+
+    for (let tr = 0; tr < traces; tr++) {
+      const bitStart = (tr % 2 === 0 ? 1 : -1);
+      const bitEnd = (tr % 3 === 0 ? 1 : -1);
+
+      ctxEye.beginPath();
+      for (let px = 0; px < w; px++) {
+        const normX = px / w;
+        // Interpolación tipo filtro coseno alzado Nyquist
+        const pulse = (1 - normX) * bitStart + normX * bitEnd;
+        const rrcCurve = Math.sin(normX * Math.PI) * (bitStart === bitEnd ? 0.3 * bitStart : -0.2);
+        const py = h / 2 - (pulse + rrcCurve) * (h * 0.32) + (Math.random() - 0.5) * noise;
+
+        if (px === 0) ctxEye.moveTo(px, py);
+        else ctxEye.lineTo(px, py);
+      }
+      ctxEye.stroke();
+    }
+  }
+
+  // 5. Cascada de Sensado Espectral (Waterfall Canvas)
+  function drawWaterfall() {
+    if (!cvWater || !ctxWater) return;
+    const w = cvWater.width;
+    const h = cvWater.height;
+    if (w <= 0 || h <= 2) return;
+
+    // Desplazar el propio canvas 2 px hacia abajo (ruta GPU, sin leer píxeles)
+    ctxWater.drawImage(cvWater, 0, 0, w, h - 2, 0, 2, w, h - 2);
+
+    // Generar nueva línea espectral en la parte superior
+    const line = ctxWater.createImageData(w, 2);
+    const data = line.data;
+    const center = w * 0.55;
+
+    for (let x = 0; x < w; x++) {
+      let pwr = (Math.random() - 0.5) * 40 + (simState.sensingSNR + 15) * 3;
+
+      // Inyección de portadora primaria
+      if (simState.primaryTransmitting) {
+        const dist = Math.abs(x - center);
+        if (dist < 35) {
+          pwr += 160 * Math.cos((dist / 35) * (Math.PI / 2));
+        }
+      }
+
+      pwr = Math.max(0, Math.min(255, pwr));
+
+      // Mapa de calor espectral: Azul -> Cian -> Verde -> Rojo
+      let r = 0, g = 0, b = 0;
+      if (pwr < 64) {
+        b = pwr * 4;
+      } else if (pwr < 128) {
+        g = (pwr - 64) * 4;
+        b = 255;
+      } else if (pwr < 192) {
+        r = (pwr - 128) * 4;
+        g = 255;
+        b = 255 - r;
+      } else {
+        r = 255;
+        g = 255 - (pwr - 192) * 4;
+      }
+
+      for (let dy = 0; dy < 2; dy++) {
+        const idx = (dy * w + x) * 4;
+        data[idx] = r;
+        data[idx + 1] = g;
+        data[idx + 2] = b;
+        data[idx + 3] = 255;
+      }
+    }
+    ctxWater.putImageData(line, 0, 0);
+  }
+
+  let primaryPulseTimer = null;
+
+  function triggerPrimaryPulse() {
+    simState.primaryTransmitting = true;
+    const lbl = document.getElementById('ai-detected-signal');
+    const badge = document.getElementById('waterfall-state');
+    if (lbl) lbl.textContent = 'DETECTADO: Transmisión Primaria 5G-NR Activa';
+    if (badge) badge.textContent = 'PORTADORA PU PRESENTE';
+
+    if (primaryPulseTimer) clearTimeout(primaryPulseTimer);
+    primaryPulseTimer = setTimeout(() => {
+      simState.primaryTransmitting = false;
+      if (lbl) lbl.textContent = 'Detectado: Solo Ruido Térmico';
+      if (badge) badge.textContent = 'Escaneando: 3.55 GHz';
+      primaryPulseTimer = null;
+    }, 4500);
+  }
+
+  function updateSensingSNR(val) {
+    simState.sensingSNR = parseFloat(val);
+    const disp = document.getElementById('disp-sensing-snr');
+    const classic = document.getElementById('sensing-classic-state');
+    const ai = document.getElementById('sensing-ai-state');
+    const det = document.getElementById('status-ai-det');
+
+    if (disp) disp.textContent = `${simState.sensingSNR} dB`;
+
+    if (classic && ai) {
+      if (simState.sensingSNR < 0) {
+        classic.textContent = 'FALLA (CONFUSIÓN CON RUIDO)';
+        classic.style.color = '#a2191f';
+        ai.textContent = 'DETECCIÓN EXACTA (CNN 98.4%)';
+        ai.style.color = '#0e6027';
+      } else {
+        classic.textContent = 'DETECCIÓN BÁSICA';
+        classic.style.color = '#7a5a00';
+        ai.textContent = 'CLASIFICACIÓN MODULACIÓN 100%';
+        ai.style.color = '#0e6027';
+      }
+    }
+
+    // Precisión sincronizada con el SNR del slider (modelo ilustrativo)
+    if (det) {
+      det.textContent = simState.sensingSNR < 0
+        ? `Precisión estimada: 98.4 % (SNR = ${simState.sensingSNR} dB)`
+        : `Precisión estimada: 99.1 % (SNR = ${simState.sensingSNR} dB)`;
+    }
+  }
+
+  /* ========================================================================
+     EVALUADOR DE VIABILIDAD 5G PRIVADA (TAB 3)
+     ======================================================================== */
+  function run5GEvaluation() {
+    /* Capacidades reales por hardware (hojas de datos de fabricante) */
+    const EVAL_HW = {
+      rtlsdr:    { name: 'RTL-SDR',        tx: false, duplex: 'simplex', maxBw: 2.4, adc: 8,  fmin: 24e6, fmax: 1766e6, clk: '20–50 ppm',                 clkOk: false },
+      hackrf:    { name: 'HackRF One',      tx: true,  duplex: 'half',    maxBw: 20,  adc: 8,  fmin: 1e6,  fmax: 6e9,    clk: '~20 ppm',                   clkOk: false },
+      usrp_b210: { name: 'Ettus USRP B210', tx: true,  duplex: 'full',    maxBw: 56,  adc: 12, dac: 12, fmin: 70e6, fmax: 6e9,    clk: '±2.0 ppm (GPSDO opcional)', clkOk: false },
+      usrp_x310: { name: 'Ettus USRP X310', tx: true,  duplex: 'full',    maxBw: 160, adc: 14, dac: 16, fmin: 10e6, fmax: 6e9,    clk: '2.5 ppm (GPSDO opcional)',  clkOk: false }
+    };
+
+    /* Bandas 5G-NR FR1 (3GPP TS 38.101-1) */
+    const EVAL_BANDS = {
+      n78: { label: 'n78', fmin: 3.30e9,  fmax: 3.80e9,  maxBw: 100 },
+      n77: { label: 'n77', fmin: 3.30e9,  fmax: 4.20e9,  maxBw: 100 },
+      n41: { label: 'n41', fmin: 2.496e9, fmax: 2.690e9, maxBw: 100 },
+      n28: { label: 'n28', fmin: 703e6,   fmax: 803e6,   maxBw: 40  }
+    };
+
+    /* Requisitos mínimos por modulación de tráfico (3GPP TS 38.101-1) */
+    const EVAL_MOD = {
+      qpsk:   { label: 'QPSK',    minBits: 8,  evm: 17.5 },
+      qam64:  { label: '64-QAM',  minBits: 10, evm: 8.0  },
+      qam256: { label: '256-QAM', minBits: 12, evm: 3.5  }
+    };
+
+    const hwKey      = document.getElementById('eval-hw-choice').value;
+    const bandKey    = document.getElementById('eval-band').value;
+    const bw         = parseInt(document.getElementById('eval-bw').value, 10);
+    const duplexMode = document.getElementById('eval-duplex').value;
+    const role       = document.getElementById('eval-role').value;
+    const modKey     = document.getElementById('eval-mod').value;
+
+    const hw   = EVAL_HW[hwKey];
+    const band = EVAL_BANDS[bandKey];
+    const mod  = EVAL_MOD[modKey] || EVAL_MOD.qam256;
+    if (!hw || !band) return;
+
+    const ids = {
+      tx:     ['check-tx',     'desc-check-tx',     'icon-check-tx'],
+      duplex: ['check-duplex', 'desc-check-duplex', 'icon-check-duplex'],
+      bw:     ['check-bw',     'desc-check-bw',     'icon-check-bw'],
+      freq:   ['check-freq',   'desc-check-freq',   'icon-check-freq'],
+      adc:    ['check-adc',    'desc-check-adc',    'icon-check-adc'],
+      clock:  ['check-clock',  'desc-check-clock',  'icon-check-clock']
+    };
+    const el = {};
+    for (const k in ids) el[k] = {
+      box: document.getElementById(ids[k][0]),
+      txt: document.getElementById(ids[k][1]),
+      ico: document.getElementById(ids[k][2])
+    };
+
+    const ICONS = {
+      pass: '<i data-lucide="check-circle" style="color: var(--positive); width: 18px; height: 18px;"></i>',
+      warn: '<i data-lucide="alert-triangle" style="color: var(--warning); width: 18px; height: 18px;"></i>',
+      fail: '<i data-lucide="x-circle" style="color: var(--error); width: 18px; height: 18px;"></i>'
+    };
+
+    let fails = 0, warns = 0;
+
+    function setCheck(k, state, msg) {
+      const ref = el[k];
+      if (!ref || !ref.box) return;
+      ref.box.className = `eval-check ${state}`;
+      ref.txt.textContent = msg;
+      ref.ico.innerHTML = ICONS[state];
+      if (state === 'fail') fails++;
+      if (state === 'warn') warns++;
+    }
+
+    /* 1. Cadena de transmisión (un sniffer no requiere TX) */
+    if (!hw.tx) {
+      setCheck('tx', role === 'sniffer' ? 'warn' : 'fail',
+        role === 'sniffer'
+          ? 'Sin cadena TX: válido como receptor pasivo, no como nodo transmisor de la red.'
+          : 'Carece de DAC y amplificador: no puede transmitir. Inviable como gNodeB.');
+    } else {
+      setCheck('tx', 'pass',
+        `${hw.name} integra cadena TX con DAC y amplificador; potencia y filtrado dependen del front-end.`);
+    }
+
+    /* 2. Dúplex */
+    if (hw.duplex === 'full') {
+      setCheck('duplex', 'pass',
+        'Full-dúplex simultáneo por hardware (TX y RX concurrentes).');
+    } else if (duplexMode === 'fdd') {
+      setCheck('duplex', 'fail',
+        'FDD exige TX y RX simultáneos; este equipo es ' +
+        (hw.duplex === 'half' ? 'half-duplex.' : 'solo recepción.'));
+    } else if (hw.duplex === 'half') {
+      setCheck('duplex', 'warn',
+        'Half-duplex con conmutación electrónica (µs): puede seguir TDD lento, no la temporización estricta de 5G.');
+    } else {
+      setCheck('duplex', 'fail',
+        'Simplex (solo RX): no puede responder PRACH ni sincronizar slots TDD.');
+    }
+
+    /* 3. Ancho de banda instantáneo */
+    if (bw <= hw.maxBw) {
+      setCheck('bw', 'pass', `${hw.maxBw} MHz instantáneos cubren el canal de ${bw} MHz.`);
+    } else {
+      setCheck('bw', 'fail',
+        `El canal de ${bw} MHz supera los ${hw.maxBw} MHz instantáneos del ${hw.name}.`);
+    }
+
+    /* 4. Cobertura de la banda seleccionada */
+    if (band.fmin >= hw.fmin && band.fmax <= hw.fmax) {
+      if (bw <= band.maxBw) {
+        setCheck('freq', 'pass', `Sintoniza ${band.label} y admite canales de hasta ${band.maxBw} MHz.`);
+      } else {
+        setCheck('freq', 'fail', `${band.label} no admite portadoras de ${bw} MHz (máx. ${band.maxBw} MHz).`);
+      }
+    } else if (Math.min(band.fmax, hw.fmax) > Math.max(band.fmin, hw.fmin)) {
+      setCheck('freq', 'warn',
+        `Cobertura parcial de ${band.label}: el equipo llega a ${(hw.fmax / 1e9).toFixed(3)} GHz.`);
+    } else {
+      setCheck('freq', 'fail',
+        `No sintoniza ${band.label}: el equipo llega a ${(hw.fmax / 1e9).toFixed(3)} GHz.`);
+    }
+
+    /* 5. Cuantización / rango dinámico frente a la modulación elegida */
+    if (hw.adc >= mod.minBits) {
+      setCheck('adc', 'pass',
+        `${hw.adc} bits cubren el mínimo de ${mod.minBits} bits para ${mod.label} (EVM objetivo < ${mod.evm}%).`);
+    } else if (hw.adc >= mod.minBits - 2) {
+      setCheck('adc', 'warn',
+        `${hw.adc} bits: margen justo para ${mod.label}; se recomiendan ${mod.minBits} bits.`);
+    } else {
+      setCheck('adc', 'fail',
+        `${hw.adc} bits son insuficientes para ${mod.label}: se requieren al menos ${mod.minBits} bits.`);
+    }
+
+    /* 6. Reloj */
+    if (hw.clkOk) {
+      setCheck('clock', 'pass', `Estabilidad ${hw.clk} conforme a 3GPP.`);
+    } else {
+      setCheck('clock', 'warn',
+        `${hw.clk}. Requiere GPSDO o disciplina externa para cumplir ±0.05 ppm.`);
+    }
+
+    /* Veredicto derivado de los checks, no hardcodeado */
+    const verdictTitle = document.getElementById('eval-verdict-title');
+    const verdictBadge = document.getElementById('eval-verdict-badge');
+
+    if (fails === 0 && warns === 0) {
+      verdictTitle.textContent = `${hw.name}: APTO para ${band.label}`;
+      verdictBadge.textContent = 'CUMPLE';
+      verdictBadge.className = 'status-pill status-pass';
+    } else if (fails === 0) {
+      verdictTitle.textContent = `${hw.name}: APTO CON RESERVAS para ${band.label}`;
+      verdictBadge.textContent = 'APTO CON RESERVAS';
+      verdictBadge.className = 'status-pill status-warn';
+    } else {
+      verdictTitle.textContent = `${hw.name}: NO APTO para gNodeB 5G`;
+      verdictBadge.textContent = 'NO CUMPLE';
+      verdictBadge.className = 'status-pill status-fail';
+    }
+
+    /* Conclusión dinámica en contenedor propio (la teoría no se sobrescribe) */
+    const expText = document.getElementById('eval-explanation-text');
+    if (expText) {
+      if (fails === 0 && warns === 0) {
+        expText.innerHTML = `<strong>Conclusión:</strong> el ${hw.name} cubre ${band.label} con ${bw} MHz y ${mod.label}; cumple todos los requisitos evaluados.`;
+      } else if (fails === 0) {
+        expText.innerHTML = `<strong>Conclusión:</strong> el ${hw.name} cubre ${band.label} con ${bw} MHz y ${mod.label}, pero mantiene ${warns} advertencia(s) que limitan el despliegue (revisa los checks en amarillo).`;
+      } else {
+        expText.innerHTML = `<strong>Conclusión:</strong> el ${hw.name} presenta ${fails} incumplimiento(s) para ${band.label} con ${bw} MHz. Revisa los checks en rojo antes de plantear un despliegue real.`;
+      }
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function scrollToCredits() {
+    const el = document.getElementById('credits-banner');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+
+</body>
+</html>
